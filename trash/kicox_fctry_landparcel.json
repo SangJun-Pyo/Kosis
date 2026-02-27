@@ -4,6 +4,7 @@
   "base_url": "https://apis.data.go.kr/B550624/fctryRegistLndpclInfo/getFctryLndpclService",
   "params": {
     "serviceKey": "{{DATA_GO_KR_SERVICE_KEY}}",
+    "ServiceKey": "{{DATA_GO_KR_SERVICE_KEY}}",
     "type": "json",
     "pageNo": 1,
     "numOfRows": 100,

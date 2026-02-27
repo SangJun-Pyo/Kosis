@@ -247,6 +247,10 @@ def run_data_go_kr_job(job: dict) -> Tuple[pd.DataFrame, Optional[pd.DataFrame],
     r = requests.get(base_url, params=params, timeout=60)
     r.raise_for_status()
 
+    print("STATUS:", r.status_code)
+    print("CONTENT-TYPE:", r.headers.get("Content-Type"))
+    print("BODY_HEAD:", r.text[:500])
+
     # 응답 JSON 시도
     try:
         data = r.json()

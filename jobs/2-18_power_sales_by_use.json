@@ -1,0 +1,23 @@
+{
+  "job_name": "행정구역별_용도별_판매전력량_최근3년",
+  "provider": "kosis",
+
+  "orgId": "310",
+  "tblId": "DT_31002_A006",
+  "prdSe": "Y",
+  "newEstPrdCnt": 3,
+
+  "itmId": "TOTAL SEOUL BUSAN DEAGU INCHEON GWANGJU DAEJEON ULSAN SEJONG GYEONGGI GANGWON CHUNGBUK CHUNGNAM JEONBUK JEONNAM GYEONGBUK GYEONGNAM JEJU GAESEONG",
+  "objL1": "ALL",
+
+  "output_subdir": "경제산업",
+  "output_prefix": "행정구역별_용도별_판매전력량_최근3년",
+
+  "pivot": {
+    "index": ["C1_NM"],
+    "columns": ["PRD_DE", "ITM_NM"],
+    "values": "DT",
+    "sheet_name": "TABLE_VIEW",
+    "flatten_columns_year": false
+  }
+}

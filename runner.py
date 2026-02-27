@@ -2,19 +2,75 @@ import os
 import json
 from pathlib import Path
 from datetime import datetime
+from typing import Any, Dict, List, Optional, Tuple
+
 import requests
 import pandas as pd
 
-BASE_URL = "https://kosis.kr/openapi/Param/statisticsParameterData.do"
+# -----------------------------
+# 공통 설정
+# -----------------------------
+KOSIS_BASE_URL = "https://kosis.kr/openapi/Param/statisticsParameterData.do"
 JOBS_DIR = Path("jobs")
 OUTPUT_ROOT = Path("output")
 
-api_key = os.getenv("KOSIS_API_KEY", "").strip()
-if not api_key:
-    raise RuntimeError("환경변수 KOSIS_API_KEY가 설정되어 있지 않습니다.")
+# KOSIS 키는 기존 그대로 유지 (provider 없는 job은 kosis로 처리)
+KOSIS_API_KEY = os.getenv("KOSIS_API_KEY", "").strip()
 
 
-def make_default_pivot(df: pd.DataFrame) -> pd.DataFrame | None:
+# -----------------------------
+# 유틸
+# -----------------------------
+def ensure_dir(p: Path) -> None:
+    p.mkdir(parents=True, exist_ok=True)
+
+
+def deep_get(obj: Any, path: str) -> Any:
+    """
+    점(.) 경로로 딕셔너리/리스트 내부 접근
+    예) "response.body.items.item"
+    - dict: key로 접근
+    - list: 숫자 인덱스 접근 가능 (예: "items.0.name")
+    """
+    cur = obj
+    if not path:
+        return cur
+    for part in path.split("."):
+        if cur is None:
+            return None
+        if isinstance(cur, dict):
+            cur = cur.get(part)
+        elif isinstance(cur, list):
+            if part.isdigit():
+                idx = int(part)
+                cur = cur[idx] if 0 <= idx < len(cur) else None
+            else:
+                # 리스트에 part가 오면 의미 없으니 None 처리
+                return None
+        else:
+            return None
+    return cur
+
+
+def normalize_to_list(x: Any) -> List[Any]:
+    if x is None:
+        return []
+    if isinstance(x, list):
+        return x
+    return [x]
+
+
+def sanitize_filename(name: str) -> str:
+    # 윈도우 금지문자 치환
+    for ch in '\\/:*?"<>|':
+        name = name.replace(ch, "_")
+    return name.strip()[:150]
+
+
+# -----------------------------
+# Pivot (기존 그대로 + 커스텀)
+# -----------------------------
+def make_default_pivot(df: pd.DataFrame) -> Optional[pd.DataFrame]:
     """
     기본 피벗: 지역(C1_NM) x 시점(PRD_DE)
     """
@@ -23,27 +79,27 @@ def make_default_pivot(df: pd.DataFrame) -> pd.DataFrame | None:
     if "C1_NM" not in df.columns:
         return None
 
-    df = df.copy()
-    df["DT"] = pd.to_numeric(df["DT"], errors="coerce")
-    df["PRD_DE"] = df["PRD_DE"].astype(str)
+    d = df.copy()
+    d["DT"] = pd.to_numeric(d["DT"], errors="coerce")
+    d["PRD_DE"] = d["PRD_DE"].astype(str)
 
-    pivot = (
-        df.pivot_table(
+    pv = (
+        d.pivot_table(
             index="C1_NM",
             columns="PRD_DE",
             values="DT",
-            aggfunc="first"
+            aggfunc="first",
         )
         .sort_index()
     )
 
-    # 202511 -> 2025.11 (월일 때만) / 연도(Y)면 그냥 2023 형태로 유지됨
+    # 202511 -> 2025.11 (월일 때만) / 연도(Y)면 2023 유지
     def fmt_prd(x: str) -> str:
         x = str(x)
         return f"{x[:4]}.{x[4:]}" if len(x) >= 6 else x
 
-    pivot.columns = [fmt_prd(c) for c in pivot.columns]
-    return pivot.reset_index()
+    pv.columns = [fmt_prd(c) for c in pv.columns]
+    return pv.reset_index()
 
 
 def make_custom_pivot(df: pd.DataFrame, pivot_cfg: dict) -> pd.DataFrame:
@@ -70,18 +126,13 @@ def make_custom_pivot(df: pd.DataFrame, pivot_cfg: dict) -> pd.DataFrame:
     if missing:
         raise RuntimeError(f"Pivot columns missing: {missing}")
 
-    df = df.copy()
-    if val in df.columns:
-        df[val] = pd.to_numeric(df[val], errors="coerce")
-    if "PRD_DE" in df.columns:
-        df["PRD_DE"] = df["PRD_DE"].astype(str)
+    d = df.copy()
+    if val in d.columns:
+        d[val] = pd.to_numeric(d[val], errors="coerce")
+    if "PRD_DE" in d.columns:
+        d["PRD_DE"] = d["PRD_DE"].astype(str)
 
-    pv = df.pivot_table(
-        index=idx,
-        columns=cols,
-        values=val,
-        aggfunc="first"
-    )
+    pv = d.pivot_table(index=idx, columns=cols, values=val, aggfunc="first")
 
     # 컬럼 평탄화
     if isinstance(pv.columns, pd.MultiIndex):
@@ -89,30 +140,45 @@ def make_custom_pivot(df: pd.DataFrame, pivot_cfg: dict) -> pd.DataFrame:
     else:
         pv.columns = [str(c) for c in pv.columns]
 
-    # (옵션) 연/월 보기 좋게: PRD_DE만 쓰는 케이스에 한해 포맷
-    # flatten_columns_year=True면 연도는 그대로 두고,
-    # 월이면 202511 -> 2025.11로 바꿈
+    # (옵션) 월 포맷
     if pivot_cfg.get("flatten_columns_year", False):
         def fmt_prd2(x: str) -> str:
             x = str(x)
             return f"{x[:4]}.{x[4:]}" if len(x) >= 6 and x.isdigit() else x
         pv.columns = [fmt_prd2(c) for c in pv.columns]
 
-    pv = pv.reset_index()
-    return pv
+    return pv.reset_index()
 
 
-def run_job(job_path: Path):
-    with open(job_path, "r", encoding="utf-8") as f:
-        job = json.load(f)
+def build_table_view(df: pd.DataFrame, job: dict) -> Tuple[Optional[pd.DataFrame], str]:
+    """
+    job['pivot'] 있으면 custom, 없으면 default.
+    반환: (pivot_df or None, sheet_name)
+    """
+    pivot_cfg = job.get("pivot")
+    sheet_name = "TABLE_VIEW"
+    if pivot_cfg and pivot_cfg.get("sheet_name"):
+        sheet_name = pivot_cfg["sheet_name"]
 
-    job_name = job.get("job_name", job_path.stem)
-    print(f"\n▶ 실행: {job_name}")
+    try:
+        if pivot_cfg:
+            return make_custom_pivot(df, pivot_cfg), sheet_name
+        return make_default_pivot(df), sheet_name
+    except Exception as e:
+        print("⚠ TABLE_VIEW 생성 실패:", e)
+        return None, sheet_name
 
-    # ---- params 구성 ----
+
+# -----------------------------
+# Provider: KOSIS
+# -----------------------------
+def run_kosis_job(job: dict) -> Tuple[pd.DataFrame, Optional[pd.DataFrame], str]:
+    if not KOSIS_API_KEY:
+        raise RuntimeError("KOSIS_API_KEY 환경변수가 없습니다.")
+
     params = {
         "method": "getList",
-        "apiKey": api_key,
+        "apiKey": KOSIS_API_KEY,
         "orgId": str(job["orgId"]).strip(),
         "tblId": str(job["tblId"]).strip(),
         "prdSe": job.get("prdSe", "M"),
@@ -131,54 +197,134 @@ def run_job(job_path: Path):
         if job.get(key):
             params[key] = str(job[key]).strip()
 
-    # ---- API 호출 ----
-    r = requests.get(BASE_URL, params=params, timeout=60)
+    r = requests.get(KOSIS_BASE_URL, params=params, timeout=60)
     r.raise_for_status()
 
     data = r.json()
     if not isinstance(data, list):
-        print("❌ API 오류(리스트 아님):", data)
-        return
+        raise RuntimeError(f"KOSIS API 오류(리스트 아님): {data}")
 
     df = pd.DataFrame(data)
     if df.empty:
-        print("⚠ 데이터 0건 (파라미터 확인 필요)")
-        return
+        raise RuntimeError("KOSIS 데이터 0건 (파라미터 확인 필요)")
 
-    # ---- TABLE_VIEW 만들기 (custom pivot 우선) ----
-    pivot_cfg = job.get("pivot")
-    pivot_df = None
+    pivot_df, sheet_name = build_table_view(df, job)
+    return df, pivot_df, sheet_name
 
+
+# -----------------------------
+# Provider: data.go.kr (일반화)
+# -----------------------------
+def run_data_go_kr_job(job: dict) -> Tuple[pd.DataFrame, Optional[pd.DataFrame], str]:
+    """
+    job 예시:
+    {
+      "provider":"data_go_kr",
+      "base_url":"https://apis.data.go.kr/....",
+      "params": {"serviceKey":"{{DATA_GO_KR_SERVICE_KEY}}", "type":"json", ...},
+      "item_path":"response.body.items.item",   # 필수(권장)
+      "output_prefix":"...",
+      "pivot": {...}
+    }
+    """
+    base_url = job.get("base_url")
+    if not base_url:
+        raise RuntimeError("data_go_kr job에는 base_url이 필요합니다.")
+
+    params = job.get("params", {})
+    if not isinstance(params, dict):
+        raise RuntimeError("data_go_kr job의 params는 dict여야 합니다.")
+
+    # serviceKey 치환 지원
+    # - job JSON에 "{{DATA_GO_KR_SERVICE_KEY}}"로 넣어두면 환경변수 DATA_GO_KR_SERVICE_KEY에서 읽어줌
+    svc_env = os.getenv("DATA_GO_KR_SERVICE_KEY", "").strip()
+    for k, v in list(params.items()):
+        if isinstance(v, str) and v.strip() == "{{DATA_GO_KR_SERVICE_KEY}}":
+            if not svc_env:
+                raise RuntimeError("환경변수 DATA_GO_KR_SERVICE_KEY가 없습니다.")
+            params[k] = svc_env
+
+    r = requests.get(base_url, params=params, timeout=60)
+    r.raise_for_status()
+
+    # 응답 JSON 시도
     try:
-        if pivot_cfg:
-            pivot_df = make_custom_pivot(df, pivot_cfg)
-        else:
-            pivot_df = make_default_pivot(df)
-    except Exception as e:
-        print("⚠ TABLE_VIEW 생성 실패:", e)
-        pivot_df = None
+        data = r.json()
+    except Exception:
+        # XML 등일 수 있음
+        raise RuntimeError("data.go.kr 응답이 JSON이 아닙니다. (job params에 type/json 옵션 확인 필요)")
 
-    # ---- 저장 경로/파일명 ----
+    item_path = job.get("item_path", "")
+    if not item_path:
+        # item_path 없으면 최상단이 리스트인지 확인
+        if isinstance(data, list):
+            items = data
+        else:
+            raise RuntimeError("data_go_kr job에는 item_path가 필요합니다. (예: response.body.items.item)")
+    else:
+        items = deep_get(data, item_path)
+
+    items = normalize_to_list(items)
+    if not items:
+        raise RuntimeError(f"data.go.kr items 0건 (item_path={item_path})")
+
+    # items가 dict가 아니라 문자열/숫자일 수도 있으니 안전 처리
+    # dict list가 아니면 DataFrame이 이상해질 수 있음
+    if isinstance(items[0], dict):
+        df = pd.DataFrame(items)
+    else:
+        df = pd.DataFrame({"value": items})
+
+    pivot_df, sheet_name = build_table_view(df, job)
+    return df, pivot_df, sheet_name
+
+
+# -----------------------------
+# 저장
+# -----------------------------
+def save_excel(job: dict, raw_df: pd.DataFrame, pivot_df: Optional[pd.DataFrame], sheet_name: str) -> Path:
     today = datetime.today().strftime("%Y%m%d")
 
     subdir = job.get("output_subdir", "")
     out_dir = OUTPUT_ROOT / subdir if subdir else OUTPUT_ROOT
-    out_dir.mkdir(parents=True, exist_ok=True)
+    ensure_dir(out_dir)
 
-    prefix = job.get("output_prefix", "kosis")
+    prefix = job.get("output_prefix", "export")
+    prefix = sanitize_filename(prefix)
+
     file_name = f"{prefix}_{today}.xlsx"
     out_path = out_dir / file_name
 
-    sheet_name = "TABLE_VIEW"
-    if pivot_cfg and pivot_cfg.get("sheet_name"):
-        sheet_name = pivot_cfg["sheet_name"]
-
-    # ---- 엑셀 저장 ----
     with pd.ExcelWriter(out_path, engine="openpyxl") as writer:
-        df.to_excel(writer, sheet_name="RAW", index=False)
+        raw_df.to_excel(writer, sheet_name="RAW", index=False)
         if pivot_df is not None:
-            pivot_df.to_excel(writer, sheet_name=sheet_name, index=False)
+            # 엑셀 시트명 제한(31자)
+            sheet = sheet_name[:31]
+            pivot_df.to_excel(writer, sheet_name=sheet, index=False)
 
+    return out_path
+
+
+# -----------------------------
+# 실행
+# -----------------------------
+def run_job(job_path: Path) -> None:
+    with open(job_path, "r", encoding="utf-8") as f:
+        job = json.load(f)
+
+    job_name = job.get("job_name", job_path.stem)
+    provider = job.get("provider", "kosis")  # ★ provider 없으면 kosis로 처리
+
+    print(f"\n▶ 실행: {job_name}  (provider={provider})")
+
+    if provider == "kosis":
+        raw_df, pivot_df, sheet_name = run_kosis_job(job)
+    elif provider == "data_go_kr":
+        raw_df, pivot_df, sheet_name = run_data_go_kr_job(job)
+    else:
+        raise RuntimeError(f"Unknown provider: {provider}")
+
+    out_path = save_excel(job, raw_df, pivot_df, sheet_name)
     print(f"✅ 저장 완료: {out_path}")
 
 
@@ -187,7 +333,10 @@ def main():
     print(f"총 {len(jobs)}개 job 실행")
 
     for job_file in jobs:
-        run_job(job_file)
+        try:
+            run_job(job_file)
+        except Exception as e:
+            print(f"❌ 실패: {job_file.name} -> {e}")
 
     print("\n모든 작업 완료")
 

@@ -1,15 +1,15 @@
 {
   "provider": "data_go_kr",
-  "job_name": "한국산업단지공단_공장등록필지정보",
+  "job_name": "산업단지_공장등록필지정보_삼성전자",
   "base_url": "https://apis.data.go.kr/B550624/fctryRegistLndpclInfo/getFctryLndpclService",
-
   "params": {
     "serviceKey": "{{DATA_GO_KR_SERVICE_KEY}}",
     "type": "json",
     "pageNo": 1,
-    "numOfRows": 100
+    "numOfRows": 100,
+    "cmpnyNm": "삼성전자"
   },
-
+  "item_path": "response.body.items.item",
   "output_subdir": "경제산업",
-  "output_prefix": "2-15_산업단지_공장등록필지"
+  "output_prefix": "산업단지 총괄 현황"
 }

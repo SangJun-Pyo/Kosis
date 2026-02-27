@@ -1,0 +1,24 @@
+{
+  "job_name": "공항별통계_최근3개월",
+  "orgId": "381",
+  "tblId": "DT_920005_B001",
+  "prdSe": "M",
+  "newEstPrdCnt": 3,
+  "format": "json",
+  "jsonVD": "Y",
+
+  "itmId": "T001 T002 T003",
+  "objL1": "ALL",
+  "objL2": "ALL",
+
+  "output_subdir": "경제산업",
+  "output_prefix": "공항별통계_최근_3개월",
+
+  "pivot": {
+    "index": ["C1_NM"],
+    "columns": ["PRD_DE", "ITM_NM", "C2_NM"],
+    "values": "DT",
+    "sheet_name": "TABLE_VIEW",
+    "flatten_columns_year": true
+  }
+}

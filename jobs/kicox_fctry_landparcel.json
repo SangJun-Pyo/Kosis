@@ -1,0 +1,15 @@
+{
+  "provider": "data_go_kr",
+  "job_name": "한국산업단지공단_공장등록필지정보",
+  "base_url": "https://apis.data.go.kr/B550624/fctryRegistLndpclInfo/getFctryLndpclService",
+
+  "params": {
+    "serviceKey": "{{DATA_GO_KR_SERVICE_KEY}}",
+    "type": "json",
+    "pageNo": 1,
+    "numOfRows": 100
+  },
+
+  "output_subdir": "경제산업",
+  "output_prefix": "2-15_산업단지_공장등록필지"
+}

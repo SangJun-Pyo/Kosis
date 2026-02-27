@@ -1,0 +1,11 @@
+{
+  "job_name": "17개광역_인구_최근3개월",
+  "orgId": "101",
+  "tblId": "DT_1B040A3",
+  "prdSe": "M",
+  "newEstPrdCnt": 3,
+  "itmId": "T20",
+  "objL1": "11 26 27 28 29 30 31 36 41 51 43 44 52 46 47 48 50",
+  "output_subdir": "인구",
+  "output_prefix": "17개_광역의_인구_수_변화_최근_3개월"
+}

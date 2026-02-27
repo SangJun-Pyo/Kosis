@@ -1,0 +1,25 @@
+{
+  "job_name": "가구부채_최근3년",
+  "orgId": "101",
+  "tblId": "DT_1HDAAA01",
+  "prdSe": "Y",
+  "newEstPrdCnt": 3,
+  "format": "json",
+  "jsonVD": "Y",
+
+  "itmId": "T01",
+  "objL1": "ALL",
+  "objL2": "B0500 B0510 B0520",
+  "objL3": "C01 C02 C03 C04 C05 C06 C08",
+
+  "output_subdir": "복지",
+  "output_prefix": "가구부채_최근3년",
+
+  "pivot": {
+    "index": ["C1_NM", "C2_NM", "C3_NM"],
+    "columns": ["PRD_DE"],
+    "values": "DT",
+    "sheet_name": "TABLE_VIEW",
+    "flatten_columns_year": true
+  }
+}

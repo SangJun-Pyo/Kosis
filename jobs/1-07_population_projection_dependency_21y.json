@@ -1,0 +1,26 @@
+{
+  "job_name": "1-07_장래인구추계_시군구별_인구구조부양비_최근21년",
+  "provider": "kosis",
+
+  "orgId": "101",
+  "tblId": "INH_PB0003_2022_23",
+
+  "prdSe": "Y",
+  "newEstPrdCnt": 21,
+
+  "itmId": "T10",
+  "objL1": "ALL",
+  "objL2": "ALL",
+
+  "output_subdir": "인구",
+  "output_prefix": "1-07_장래인구추계_시군구별_인구구조부양비_최근21년",
+
+  "pivot": {
+    "index": ["C1_NM", "C2_NM"],
+    "columns": ["PRD_DE"],
+    "values": "DT",
+    "sheet_name": "TABLE_VIEW",
+    "flatten_columns_year": false,
+    "sort": false
+  }
+}

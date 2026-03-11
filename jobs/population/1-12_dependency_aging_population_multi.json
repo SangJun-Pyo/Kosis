@@ -1,0 +1,99 @@
+{
+  "job_name": "1-12_부양비_고령인구_유소년인구_광역비교",
+  "provider": "kosis_sources",
+
+  "sources": [
+    {
+      "name": "dependency_index",
+      "orgId": "101",
+      "tblId": "DT_1IN2030",
+      "prdSe": "Y",
+      "newEstPrdCnt": 5,
+      "format": "json",
+      "jsonVD": "Y",
+      "itmId": "T1 T2 T3 T4 T5 T6",
+      "objL1": "01 10",
+      "objL2": "00 11 21 22 23 24 25 26 29 31 32 33 34 35 36 37 38 39"
+    },
+    {
+      "name": "population_age",
+      "orgId": "101",
+      "tblId": "DT_1IN1503",
+      "prdSe": "Y",
+      "newEstPrdCnt": 5,
+      "format": "json",
+      "jsonVD": "Y",
+      "itmId": "T00",
+      "objL1": "00 11 21 22 23 24 25 26 29 31 32 33 34 35 36 37 38 39",
+      "objL2": "000 005 010 015 104"
+    }
+  ],
+
+  "output_subdir": "인구",
+  "output_prefix": "1-12_부양비_고령인구_유소년인구_광역비교",
+
+  "views": [
+    {
+      "kind": "pivot",
+      "source": "dependency_index",
+      "sheet_name": "고령화지수_65세이상_14세이하비율",
+      "index": ["C2_NM"],
+      "columns": ["C1_NM", "ITM_NM"],
+      "values": "DT",
+      "filters": {
+        "PRD_DE": ["2024"],
+        "C1": ["01", "10"],
+        "C2": ["11", "21", "22", "23", "24", "25", "26", "29", "31", "32", "33", "34", "35", "36", "37", "38", "39"]
+      },
+      "preserve_multiindex_columns": true,
+      "sort": false
+    },
+    {
+      "kind": "pivot",
+      "source": "population_age",
+      "sheet_name": "고령인구(65세 이상인구수)",
+      "index": ["C1_NM"],
+      "columns": ["PRD_DE"],
+      "values": "DT",
+      "filters": {
+        "ITM_ID": ["T00"],
+        "C2": ["104"],
+        "C1": ["00", "11", "21", "22", "23", "24", "25", "26", "29", "31", "32", "33", "34", "35", "36", "37", "38", "39"]
+      },
+      "sort": false
+    },
+    {
+      "kind": "sum_pivot",
+      "source": "population_age",
+      "sheet_name": "유소년인구(14세이하인구수)",
+      "groupby": ["C1", "C1_NM", "PRD_DE"],
+      "index": ["C1_NM"],
+      "columns": ["PRD_DE"],
+      "values": "DT",
+      "filters": {
+        "ITM_ID": ["T00"],
+        "C2": ["005", "010", "015"],
+        "C1": ["00", "11", "21", "22", "23", "24", "25", "26", "29", "31", "32", "33", "34", "35", "36", "37", "38", "39"]
+      },
+      "sort": false
+    },
+    {
+      "kind": "rank_timeseries",
+      "source": "dependency_index",
+      "sheet_name": "SUMMARY_VIEW",
+      "filters": {
+        "C1": ["01"],
+        "ITM_ID": ["T4"],
+        "C2": ["00", "11", "21", "22", "23", "24", "25", "26", "29", "31", "32", "33", "34", "35", "36", "37", "38", "39"]
+      },
+      "region_col": "C2_NM",
+      "years": ["2020", "2021", "2022", "2023", "2024"],
+      "rank_year": "2024",
+      "area_label": "구분",
+      "rank_label": "순위",
+      "cagr_label": "CAGR('20~'24)",
+      "national_name": "전국",
+      "national_alias": "계"
+    }
+  ]
+}

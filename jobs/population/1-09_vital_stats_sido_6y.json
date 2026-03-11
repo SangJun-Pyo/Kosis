@@ -1,0 +1,28 @@
+{
+  "job_name": "1-09_인구동태건수_동태율_기본항목별_최근6년",
+  "provider": "kosis",
+
+  "orgId": "101",
+  "tblId": "DT_1B8000F",
+
+  "prdSe": "Y",
+  "newEstPrdCnt": 6,
+
+  "format": "json",
+  "jsonVD": "Y",
+
+  "itmId": "T1",
+  "objL1": "ALL",
+
+  "output_subdir": "인구",
+  "output_prefix": "1-09_인구동태건수_동태율_기본항목별_최근6년",
+
+  "pivot": {
+    "index": ["C1_NM"],
+    "columns": ["PRD_DE"],
+    "values": "DT",
+    "sheet_name": "TABLE_VIEW",
+    "flatten_columns_year": false,
+    "sort": false
+  }
+}

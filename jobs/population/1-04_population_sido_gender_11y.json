@@ -1,0 +1,28 @@
+{
+  "job_name": "1-04_주민등록인구_시도별_성별_2015_2025",
+  "provider": "kosis",
+
+  "orgId": "101",
+  "tblId": "DT_1B04005N",
+
+  "prdSe": "Y",
+  "newEstPrdCnt": 11,
+
+  "itmId": "T2 T3 T4",
+  "objL1": "00 11 26 27 28 29 30 31 36 41 51 43 44 52 46 47 48 50",
+  "objL2": "ALL",
+
+  "output_subdir": "인구",
+  "output_prefix": "1-04_인구_시도별_성별_2015_2025",
+
+  "pivot": {
+    "index": ["C1_NM"],
+    "columns": ["PRD_DE", "ITM_NM"],
+    "values": "DT",
+    "filters": {
+      "PRD_DE": ["2015", "2025"]
+    },
+    "sheet_name": "TABLE_VIEW",
+    "flatten_columns_year": false
+  }
+}

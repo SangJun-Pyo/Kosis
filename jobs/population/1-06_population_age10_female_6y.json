@@ -1,0 +1,33 @@
+{
+  "job_name": "1-06_주민등록인구_시도_10세별_여자인구_최근6년",
+  "provider": "kosis",
+
+  "orgId": "101",
+  "tblId": "DT_1B04005N",
+
+  "prdSe": "Y",
+  "newEstPrdCnt": 6,
+
+  "itmId": "T4",
+  "objL1": "00 11 26 27 28 29 30 31 36 41 51 43 44 52 46 47 48 50",
+  "objL2": "ALL",
+
+  "output_subdir": "인구",
+  "output_prefix": "1-06_인구_시도_10세별_여자인구_최근6년",
+
+  "preprocess": {
+    "age_bucket_10y": {
+      "source": "C2_NM",
+      "drop_unknown": true
+    }
+  },
+
+  "pivot": {
+    "index": ["C1_NM", "C2_NM"],
+    "columns": ["PRD_DE"],
+    "values": "DT",
+    "sheet_name": "TABLE_VIEW",
+    "flatten_columns_year": false,
+    "sort": false
+  }
+}

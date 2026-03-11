@@ -1,0 +1,44 @@
+{
+  "job_name": "1-11_시도별_출생사망혼인이혼_최근6년",
+  "provider": "kosis",
+
+  "orgId": "101",
+  "tblId": "DT_1B8000H",
+
+  "prdSe": "Y",
+  "newEstPrdCnt": 6,
+
+  "format": "json",
+  "jsonVD": "Y",
+
+  "itmId": "T10 T12",
+  "objL1": "ALL",
+
+  "output_subdir": "인구",
+  "output_prefix": "1-11_시도별_출생사망혼인이혼_최근6년",
+
+  "pivot": {
+    "index": ["C1_NM"],
+    "columns": ["PRD_DE", "ITM_NM"],
+    "values": "DT",
+    "filters": {
+      "ITM_ID": ["T10", "T12"]
+    },
+    "sheet_name": "TABLE_VIEW",
+    "preserve_multiindex_columns": true,
+    "flatten_columns_year": false,
+    "sort": false
+  },
+
+  "extra_pivots": [
+    {
+      "kind": "metric_summary",
+      "sheet_name": "SUMMARY_VIEW",
+      "years": ["2020", "2021", "2022", "2023", "2024"],
+      "item_ids": ["T10", "T12"],
+      "share_year": "2024",
+      "share_item_ids": ["T10"],
+      "cagr_label": "CAGR('20~'24)"
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+.deps/
+.venv/
+__pycache__/
+*.pyc
+output/
+trash/
+~$*.xlsx
+*.xlsx
+secrets.local.bat

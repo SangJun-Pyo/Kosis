@@ -1,0 +1,56 @@
+{
+  "job_name": "1-10_유아천명당_보육시설수_광역비교_최근3년",
+  "provider": "kosis",
+
+  "orgId": "101",
+  "tblId": "DT_1YL20951",
+
+  "prdSe": "Y",
+  "newEstPrdCnt": 3,
+
+  "format": "json",
+  "jsonVD": "Y",
+
+  "itmId": "T10 T001 T002",
+  "objL1": "00 11 21 22 23 24 25 26 29 31 32 33 34 35 36 37 38 39",
+
+  "output_subdir": "인구",
+  "output_prefix": "1-10_유아천명당_보육시설수_광역비교_최근3년",
+
+  "pivot": {
+    "index": ["C1_NM"],
+    "columns": ["ITM_ID"],
+    "values": "DT",
+    "filters": {
+      "PRD_DE": ["2024"],
+      "ITM_ID": ["T10", "T001", "T002"]
+    },
+    "sheet_name": "TABLE_VIEW",
+    "column_label_map": {
+      "T10": "유아 천명당 보육시설수",
+      "T001": "보육시설(A) (개)",
+      "T002": "주민등록인구(0~5세)(B) (명)"
+    },
+    "flatten_columns_year": false,
+    "sort": false
+  },
+
+  "extra_pivots": [
+    {
+      "kind": "latest_rank",
+      "sheet_name": "SUMMARY_VIEW",
+      "year": "2024",
+      "item_ids": ["T001", "T002", "T10"],
+      "rank_item_id": "T10",
+      "area_label": "구분",
+      "rank_label": "유아 천명당 순위",
+      "national_name": "전국",
+      "national_alias": "계",
+      "column_labels": {
+        "T001": "보육시설(A)",
+        "T002": "유아 인구(0~5세 주민등록)(B)",
+        "T10": "유아 천명당 수"
+      }
+    }
+  ]
+}

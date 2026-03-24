@@ -1,0 +1,82 @@
+{
+  "job_name": "1-13_지방소멸지수_광역비교",
+  "provider": "kosis_sources",
+
+  "sources": [
+    {
+      "name": "population_age",
+      "orgId": "101",
+      "tblId": "DT_1IN1503",
+      "prdSe": "Y",
+      "newEstPrdCnt": 5,
+      "format": "json",
+      "jsonVD": "Y",
+      "itmId": "T00 T02",
+      "objL1": "00 11 21 22 23 24 25 26 29 31 32 33 34 35 36 37 38 39",
+      "objL2": "025 030 035 040 104"
+    }
+  ],
+
+  "output_subdir": "인구",
+  "output_prefix": "1-13_지방소멸지수_광역비교",
+
+  "views": [
+    {
+      "kind": "sum_pivot",
+      "source": "population_age",
+      "sheet_name": "가임여성인구",
+      "groupby": ["C1", "C1_NM", "PRD_DE"],
+      "index": ["C1_NM"],
+      "columns": ["PRD_DE"],
+      "values": "DT",
+      "filters": {
+        "ITM_ID": ["T02"],
+        "C2": ["025", "030", "035", "040"],
+        "C1": ["00", "11", "21", "22", "23", "24", "25", "26", "29", "31", "32", "33", "34", "35", "36", "37", "38", "39"]
+      },
+      "sort": false
+    },
+    {
+      "kind": "pivot",
+      "source": "population_age",
+      "sheet_name": "고령인구",
+      "index": ["C1_NM"],
+      "columns": ["PRD_DE"],
+      "values": "DT",
+      "filters": {
+        "ITM_ID": ["T00"],
+        "C2": ["104"],
+        "C1": ["00", "11", "21", "22", "23", "24", "25", "26", "29", "31", "32", "33", "34", "35", "36", "37", "38", "39"]
+      },
+      "sort": false
+    },
+    {
+      "kind": "ratio_timeseries",
+      "source": "population_age",
+      "sheet_name": "지방소멸지수",
+      "region_col": "C1_NM",
+      "groupby": ["C1", "C1_NM", "PRD_DE"],
+      "years": ["2020", "2021", "2022", "2023", "2024"],
+      "numerator_filters": {
+        "ITM_ID": ["T02"],
+        "C2": ["025", "030", "035", "040"],
+        "C1": ["00", "11", "21", "22", "23", "24", "25", "26", "29", "31", "32", "33", "34", "35", "36", "37", "38", "39"]
+      },
+      "denominator_filters": {
+        "ITM_ID": ["T00"],
+        "C2": ["104"],
+        "C1": ["00", "11", "21", "22", "23", "24", "25", "26", "29", "31", "32", "33", "34", "35", "36", "37", "38", "39"]
+      },
+      "area_label": "구분",
+      "national_name": "전국",
+      "national_alias": "계",
+      "cagr_label": "CAGR('20~'24)",
+      "stage_label": "소멸위험 5단계",
+      "latest_year": "2024",
+      "subtotal": {
+        "label": "8개 광역시 소계",
+        "members": ["서울특별시", "부산광역시", "대구광역시", "인천광역시", "광주광역시", "대전광역시", "울산광역시", "세종특별자치시"]
+      }
+    }
+  ]
+}

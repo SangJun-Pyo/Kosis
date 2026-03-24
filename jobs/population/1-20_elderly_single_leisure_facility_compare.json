@@ -1,0 +1,127 @@
+{
+  "job_name": "1-20_독거노인가구비율_노인천명당노인여가복지시설수_광역비교",
+  "provider": "kosis_sources",
+
+  "sources": [
+    {
+      "name": "elderly_single",
+      "orgId": "101",
+      "tblId": "DT_1YL12701",
+      "prdSe": "Y",
+      "newEstPrdCnt": 5,
+      "format": "json",
+      "jsonVD": "Y",
+      "itmId": "T10 T001 T002",
+      "objL1": "00 11 21 22 23 24 25 26 29 31 32 33 34 35 36 37 38 39"
+    },
+    {
+      "name": "elderly_leisure",
+      "orgId": "101",
+      "tblId": "DT_1YL20961",
+      "prdSe": "Y",
+      "newEstPrdCnt": 5,
+      "format": "json",
+      "jsonVD": "Y",
+      "itmId": "T10 T001 T002",
+      "objL1": "00 11 21 22 23 24 25 26 29 31 32 33 34 35 36 37 38 39"
+    }
+  ],
+
+  "include_source_raw": false,
+  "output_subdir": "인구",
+  "output_prefix": "1-20_독거노인가구비율_노인천명당노인여가복지시설수_광역비교",
+
+  "views": [
+    {
+      "kind": "pivot",
+      "source": "elderly_single",
+      "sheet_name": "독거노인가구비율",
+      "index": ["C1_NM"],
+      "columns": ["ITM_NM", "PRD_DE"],
+      "values": "DT",
+      "filters": {
+        "C1": ["00", "11", "21", "22", "23", "24", "25", "26", "29", "31", "32", "33", "34", "35", "36", "37", "38", "39"],
+        "ITM_ID": ["T10", "T001", "T002"]
+      },
+      "preserve_multiindex_columns": true,
+      "sort": false
+    },
+    {
+      "kind": "pivot",
+      "source": "elderly_leisure",
+      "sheet_name": "노인천명당노인여가복지시설수",
+      "index": ["C1_NM"],
+      "columns": ["ITM_NM", "PRD_DE"],
+      "values": "DT",
+      "filters": {
+        "C1": ["00", "11", "21", "22", "23", "24", "25", "26", "29", "31", "32", "33", "34", "35", "36", "37", "38", "39"],
+        "ITM_ID": ["T10", "T001", "T002"]
+      },
+      "preserve_multiindex_columns": true,
+      "sort": false
+    },
+    {
+      "kind": "paired_metric_timeseries_summary",
+      "sources": ["elderly_single", "elderly_leisure"],
+      "sheet_name": "SUMMARY_VIEW",
+      "region_col": "C1_NM",
+      "area_label": "구분",
+      "national_name": "전국",
+      "national_alias": "계",
+      "region_order": ["전국", "서울특별시", "부산광역시", "대구광역시", "인천광역시", "광주광역시", "대전광역시", "울산광역시", "세종특별자치시", "경기도", "강원특별자치도", "충청북도", "충청남도", "전북특별자치도", "전라남도", "경상북도", "경상남도", "제주특별자치도"],
+      "metrics": [
+        {
+          "label": "독거노인가구비율",
+          "filters": {
+            "TBL_ID": ["DT_1YL12701"],
+            "ITM_ID": ["T10"]
+          },
+          "years": ["2020", "2021", "2022", "2023", "2024"],
+          "cagr_label": "CAGR('20~'24)"
+        },
+        {
+          "label": "노인천명당 노인여가복지시설수",
+          "filters": {
+            "TBL_ID": ["DT_1YL20961"],
+            "ITM_ID": ["T10"]
+          },
+          "years": ["2020", "2021", "2022", "2023", "2024"],
+          "cagr_label": "CAGR('20~'24)"
+        }
+      ]
+    },
+    {
+      "kind": "paired_metric_latest_compare",
+      "sources": ["elderly_single", "elderly_leisure"],
+      "sheet_name": "SUMMARY_VIEW_2",
+      "region_col": "C1_NM",
+      "area_label": "구분",
+      "national_name": "전국",
+      "national_alias": "계",
+      "region_order": ["전국", "서울특별시", "부산광역시", "대구광역시", "인천광역시", "광주광역시", "대전광역시", "울산광역시", "세종특별자치시", "경기도", "강원특별자치도", "충청북도", "충청남도", "전북특별자치도", "전라남도", "경상북도", "경상남도", "제주특별자치도"],
+      "metrics": [
+        {
+          "label": "독거노인가구비율",
+          "filters": {
+            "TBL_ID": ["DT_1YL12701"],
+            "ITM_ID": ["T10"]
+          },
+          "years": ["2023", "2024"],
+          "change_label": "전년대비",
+          "include_pct_change": false
+        },
+        {
+          "label": "노인천명당 노인여가복지시설수",
+          "filters": {
+            "TBL_ID": ["DT_1YL20961"],
+            "ITM_ID": ["T10"]
+          },
+          "years": ["2023", "2024"],
+          "change_label": "전년대비",
+          "pct_change_label": "증감률",
+          "include_pct_change": true
+        }
+      ]
+    }
+  ]
+}

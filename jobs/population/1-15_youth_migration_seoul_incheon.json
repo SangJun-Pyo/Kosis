@@ -1,0 +1,121 @@
+{
+  "job_name": "1-15_청년(15세~29세)인구_순이동_광역비교",
+  "provider": "kosis_sources",
+
+  "sources": [
+    {
+      "name": "migration_count_age",
+      "orgId": "101",
+      "tblId": "DT_1B26001_A03",
+      "prdSe": "Y",
+      "newEstPrdCnt": 2,
+      "format": "json",
+      "jsonVD": "Y",
+      "itmId": "T10 T20 T25 T30 T31 T32 T40 T50",
+      "objL1": "00 11 26 27 28 29 30 31 36 41 51 43 44 52 46 47 48 50",
+      "objL2": "100 120 130"
+    },
+    {
+      "name": "migration_rate_age",
+      "orgId": "101",
+      "tblId": "DT_1B26006",
+      "prdSe": "Y",
+      "newEstPrdCnt": 2,
+      "format": "json",
+      "jsonVD": "Y",
+      "itmId": "T10 T20 T30 T40 T41 T42 T50 T60",
+      "objL1": "00 11 26 27 28 29 30 31 36 41 51 43 44 52 46 47 48 50",
+      "objL2": "0",
+      "objL3": "100 120 130"
+    }
+  ],
+
+  "output_subdir": "인구",
+  "output_prefix": "1-15_청년(15세~29세)인구_순이동_광역비교",
+
+  "views": [
+    {
+      "kind": "pivot",
+      "source": "migration_count_age",
+      "sheet_name": "청년(15세~29세)인구 순이동",
+      "index": ["C1_NM", "C2_NM"],
+      "columns": ["PRD_DE", "ITM_NM"],
+      "values": "DT",
+      "preserve_multiindex_columns": true,
+      "sort": false
+    },
+    {
+      "kind": "sum_pivot",
+      "source": "migration_count_age",
+      "sheet_name": "청년인구",
+      "groupby": ["C1", "C1_NM", "PRD_DE", "ITM_ID", "ITM_NM"],
+      "index": ["C1_NM"],
+      "columns": ["PRD_DE", "ITM_NM"],
+      "values": "DT",
+      "preserve_multiindex_columns": true,
+      "sort": false
+    },
+    {
+      "kind": "pivot",
+      "source": "migration_rate_age",
+      "sheet_name": "이동률",
+      "filters": {
+        "PRD_DE": ["2024"]
+      },
+      "replace_values": {
+        "ITM_ID": {
+          "T10": "총전입률",
+          "T20": "총전출률",
+          "T30": "순이동률",
+          "T40": "시도내-시군구내",
+          "T41": "시도내-시군구간 전입",
+          "T42": "시도내-시군구간 전출",
+          "T50": "시도간전입",
+          "T60": "시도간전출"
+        }
+      },
+      "index": ["ITM_ID"],
+      "columns": ["C1_NM", "C3_NM"],
+      "values": "DT",
+      "preserve_multiindex_columns": true,
+      "sort": false
+    },
+    {
+      "kind": "pivot",
+      "source": "migration_count_age",
+      "sheet_name": "SUMMARY_VIEW_1",
+      "filters": {
+        "PRD_DE": ["2025"]
+      },
+      "index": ["C1_NM", "C2_NM"],
+      "columns": ["ITM_NM"],
+      "values": "DT",
+      "sort": false
+    },
+    {
+      "kind": "pivot",
+      "source": "migration_rate_age",
+      "sheet_name": "SUMMARY_VIEW_2",
+      "filters": {
+        "PRD_DE": ["2025"]
+      },
+      "replace_values": {
+        "ITM_ID": {
+          "T10": "총전입률",
+          "T20": "총전출률",
+          "T30": "순이동률",
+          "T40": "시도내-시군구내",
+          "T41": "시도내-시군구간 전입",
+          "T42": "시도내-시군구간 전출",
+          "T50": "시도간전입",
+          "T60": "시도간전출"
+        }
+      },
+      "index": ["ITM_ID"],
+      "columns": ["C1_NM", "C3_NM"],
+      "values": "DT",
+      "preserve_multiindex_columns": true,
+      "sort": false
+    }
+  ]
+}

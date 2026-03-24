@@ -1,0 +1,315 @@
+{
+  "job_name": "1-18_장기요양서비스_이용현황_전체지역_최근5년",
+  "provider": "kosis_sources",
+
+  "sources": [
+    {
+      "name": "ltc_top_grade",
+      "orgId": "350",
+      "tblId": "DT_35006_N030",
+      "prdSe": "Y",
+      "newEstPrdCnt": 5,
+      "format": "json",
+      "jsonVD": "Y",
+      "itmId": "T001",
+      "objL1": "15350AC400A1 15350AC400B1 15350AC400C1 15350AC400D1 15350AC400E1 15350AC400F1 15350AC400G1 15350AC400G2 15350AC400H1 15350AC400I1 15350AC400J1 15350AC400K1 15350AC400L1 15350AC400M1 15350AC400N1 15350AC400O1 15350AC400P1 15350AC400Z1",
+      "objL2": "ALL",
+      "objL3": "001",
+      "objL4": "0"
+    },
+    {
+      "name": "ltc_district_total",
+      "orgId": "350",
+      "tblId": "DT_35006_N030",
+      "prdSe": "Y",
+      "newEstPrdCnt": 5,
+      "format": "json",
+      "jsonVD": "Y",
+      "itmId": "T001",
+      "objL1": "ALL",
+      "objL2": "001",
+      "objL3": "001",
+      "objL4": "0"
+    },
+    {
+      "name": "ltc_top_service",
+      "orgId": "350",
+      "tblId": "DT_35006_N030",
+      "prdSe": "Y",
+      "newEstPrdCnt": 5,
+      "format": "json",
+      "jsonVD": "Y",
+      "itmId": "T001",
+      "objL1": "15350AC400A1 15350AC400B1 15350AC400C1 15350AC400D1 15350AC400E1 15350AC400F1 15350AC400G1 15350AC400G2 15350AC400H1 15350AC400I1 15350AC400J1 15350AC400K1 15350AC400L1 15350AC400M1 15350AC400N1 15350AC400O1 15350AC400P1 15350AC400Z1",
+      "objL2": "001",
+      "objL3": "ALL",
+      "objL4": "0"
+    },
+    {
+      "name": "ltc_summary_total",
+      "orgId": "350",
+      "tblId": "DT_35006_N030",
+      "prdSe": "Y",
+      "newEstPrdCnt": 5,
+      "format": "json",
+      "jsonVD": "Y",
+      "itmId": "T001",
+      "objL1": "15350AC400Z1",
+      "objL2": "ALL",
+      "objL3": "ALL",
+      "objL4": "0"
+    }
+  ],
+
+  "output_subdir": "인구",
+  "output_prefix": "1-18_장기요양서비스_이용현황_전체지역_최근5년",
+
+  "views": [
+    {
+      "kind": "stack_blocks",
+      "sheet_name": "장기요양서비스 이용 현황",
+      "blocks": [
+        {
+          "title": "시·군·구별 등급별 급여종류별 장기요양 급여실적",
+          "source": "ltc_top_grade",
+          "kind": "pivot",
+          "index": ["C1_NM", "C2_NM"],
+          "columns": ["PRD_DE"],
+          "values": "DT",
+          "sort": false,
+          "blank_rows": 2
+        },
+        {
+          "title": "시·군·구별",
+          "source": "ltc_district_total",
+          "kind": "pivot",
+          "exclude_filters": {
+            "C1": ["15350AC400A1", "15350AC400B1", "15350AC400C1", "15350AC400D1", "15350AC400E1", "15350AC400F1", "15350AC400G1", "15350AC400G2", "15350AC400H1", "15350AC400I1", "15350AC400J1", "15350AC400K1", "15350AC400L1", "15350AC400M1", "15350AC400N1", "15350AC400O1", "15350AC400P1", "15350AC400Z1"]
+          },
+          "preprocess": {
+            "dedupe_region_names": {
+              "code_col": "C1",
+              "name_col": "C1_NM",
+              "label_col": "C1_LABEL"
+            }
+          },
+          "index": ["C1_LABEL"],
+          "columns": ["PRD_DE"],
+          "values": "DT",
+          "sort": false,
+          "blank_rows": 2
+        },
+        {
+          "title": "시·군·구별 급여종류별",
+          "source": "ltc_top_service",
+          "kind": "pivot",
+          "index": ["C1_NM", "C3_NM"],
+          "columns": ["PRD_DE"],
+          "values": "DT",
+          "sort": false,
+          "blank_rows": 0
+        }
+      ]
+    },
+    {
+      "kind": "category_timeseries_summary",
+      "source": "ltc_summary_total",
+      "sheet_name": "전국_SUMMARY",
+      "filters": {
+        "C2": ["001"]
+      },
+      "category_col": "C3_NM",
+      "row_label": "구분",
+      "category_order": ["계", "방문요양", "방문목욕", "방문간호", "주야간보호", "단기보호", "복지용구", "노인요양시설", "노인요양공동생활가정", "통합재가서비스"],
+      "years": ["2020", "2021", "2022", "2023", "2024"],
+      "cagr_label": "CAGR('20~'24)"
+    },
+    {
+      "kind": "category_timeseries_summary",
+      "source": "ltc_top_service",
+      "sheet_name": "서울_SUMMARY",
+      "filters": {"C1": ["15350AC400A1"], "C2": ["001"]},
+      "category_col": "C3_NM",
+      "row_label": "구분",
+      "category_order": ["계", "방문요양", "방문목욕", "방문간호", "주야간보호", "단기보호", "복지용구", "노인요양시설", "노인요양공동생활가정", "통합재가서비스"],
+      "years": ["2020", "2021", "2022", "2023", "2024"],
+      "cagr_label": "CAGR('20~'24)"
+    },
+    {
+      "kind": "category_timeseries_summary",
+      "source": "ltc_top_service",
+      "sheet_name": "부산_SUMMARY",
+      "filters": {"C1": ["15350AC400B1"], "C2": ["001"]},
+      "category_col": "C3_NM",
+      "row_label": "구분",
+      "category_order": ["계", "방문요양", "방문목욕", "방문간호", "주야간보호", "단기보호", "복지용구", "노인요양시설", "노인요양공동생활가정", "통합재가서비스"],
+      "years": ["2020", "2021", "2022", "2023", "2024"],
+      "cagr_label": "CAGR('20~'24)"
+    },
+    {
+      "kind": "category_timeseries_summary",
+      "source": "ltc_top_service",
+      "sheet_name": "대구_SUMMARY",
+      "filters": {"C1": ["15350AC400C1"], "C2": ["001"]},
+      "category_col": "C3_NM",
+      "row_label": "구분",
+      "category_order": ["계", "방문요양", "방문목욕", "방문간호", "주야간보호", "단기보호", "복지용구", "노인요양시설", "노인요양공동생활가정", "통합재가서비스"],
+      "years": ["2020", "2021", "2022", "2023", "2024"],
+      "cagr_label": "CAGR('20~'24)"
+    },
+    {
+      "kind": "category_timeseries_summary",
+      "source": "ltc_top_service",
+      "sheet_name": "인천_SUMMARY",
+      "filters": {"C1": ["15350AC400D1"], "C2": ["001"]},
+      "category_col": "C3_NM",
+      "row_label": "구분",
+      "category_order": ["계", "방문요양", "방문목욕", "방문간호", "주야간보호", "단기보호", "복지용구", "노인요양시설", "노인요양공동생활가정", "통합재가서비스"],
+      "years": ["2020", "2021", "2022", "2023", "2024"],
+      "cagr_label": "CAGR('20~'24)"
+    },
+    {
+      "kind": "category_timeseries_summary",
+      "source": "ltc_top_service",
+      "sheet_name": "광주_SUMMARY",
+      "filters": {"C1": ["15350AC400E1"], "C2": ["001"]},
+      "category_col": "C3_NM",
+      "row_label": "구분",
+      "category_order": ["계", "방문요양", "방문목욕", "방문간호", "주야간보호", "단기보호", "복지용구", "노인요양시설", "노인요양공동생활가정", "통합재가서비스"],
+      "years": ["2020", "2021", "2022", "2023", "2024"],
+      "cagr_label": "CAGR('20~'24)"
+    },
+    {
+      "kind": "category_timeseries_summary",
+      "source": "ltc_top_service",
+      "sheet_name": "대전_SUMMARY",
+      "filters": {"C1": ["15350AC400F1"], "C2": ["001"]},
+      "category_col": "C3_NM",
+      "row_label": "구분",
+      "category_order": ["계", "방문요양", "방문목욕", "방문간호", "주야간보호", "단기보호", "복지용구", "노인요양시설", "노인요양공동생활가정", "통합재가서비스"],
+      "years": ["2020", "2021", "2022", "2023", "2024"],
+      "cagr_label": "CAGR('20~'24)"
+    },
+    {
+      "kind": "category_timeseries_summary",
+      "source": "ltc_top_service",
+      "sheet_name": "울산_SUMMARY",
+      "filters": {"C1": ["15350AC400G1"], "C2": ["001"]},
+      "category_col": "C3_NM",
+      "row_label": "구분",
+      "category_order": ["계", "방문요양", "방문목욕", "방문간호", "주야간보호", "단기보호", "복지용구", "노인요양시설", "노인요양공동생활가정", "통합재가서비스"],
+      "years": ["2020", "2021", "2022", "2023", "2024"],
+      "cagr_label": "CAGR('20~'24)"
+    },
+    {
+      "kind": "category_timeseries_summary",
+      "source": "ltc_top_service",
+      "sheet_name": "세종_SUMMARY",
+      "filters": {"C1": ["15350AC400G2"], "C2": ["001"]},
+      "category_col": "C3_NM",
+      "row_label": "구분",
+      "category_order": ["계", "방문요양", "방문목욕", "방문간호", "주야간보호", "단기보호", "복지용구", "노인요양시설", "노인요양공동생활가정", "통합재가서비스"],
+      "years": ["2020", "2021", "2022", "2023", "2024"],
+      "cagr_label": "CAGR('20~'24)"
+    },
+    {
+      "kind": "category_timeseries_summary",
+      "source": "ltc_top_service",
+      "sheet_name": "경기_SUMMARY",
+      "filters": {"C1": ["15350AC400H1"], "C2": ["001"]},
+      "category_col": "C3_NM",
+      "row_label": "구분",
+      "category_order": ["계", "방문요양", "방문목욕", "방문간호", "주야간보호", "단기보호", "복지용구", "노인요양시설", "노인요양공동생활가정", "통합재가서비스"],
+      "years": ["2020", "2021", "2022", "2023", "2024"],
+      "cagr_label": "CAGR('20~'24)"
+    },
+    {
+      "kind": "category_timeseries_summary",
+      "source": "ltc_top_service",
+      "sheet_name": "강원_SUMMARY",
+      "filters": {"C1": ["15350AC400I1"], "C2": ["001"]},
+      "category_col": "C3_NM",
+      "row_label": "구분",
+      "category_order": ["계", "방문요양", "방문목욕", "방문간호", "주야간보호", "단기보호", "복지용구", "노인요양시설", "노인요양공동생활가정", "통합재가서비스"],
+      "years": ["2020", "2021", "2022", "2023", "2024"],
+      "cagr_label": "CAGR('20~'24)"
+    },
+    {
+      "kind": "category_timeseries_summary",
+      "source": "ltc_top_service",
+      "sheet_name": "충북_SUMMARY",
+      "filters": {"C1": ["15350AC400J1"], "C2": ["001"]},
+      "category_col": "C3_NM",
+      "row_label": "구분",
+      "category_order": ["계", "방문요양", "방문목욕", "방문간호", "주야간보호", "단기보호", "복지용구", "노인요양시설", "노인요양공동생활가정", "통합재가서비스"],
+      "years": ["2020", "2021", "2022", "2023", "2024"],
+      "cagr_label": "CAGR('20~'24)"
+    },
+    {
+      "kind": "category_timeseries_summary",
+      "source": "ltc_top_service",
+      "sheet_name": "충남_SUMMARY",
+      "filters": {"C1": ["15350AC400K1"], "C2": ["001"]},
+      "category_col": "C3_NM",
+      "row_label": "구분",
+      "category_order": ["계", "방문요양", "방문목욕", "방문간호", "주야간보호", "단기보호", "복지용구", "노인요양시설", "노인요양공동생활가정", "통합재가서비스"],
+      "years": ["2020", "2021", "2022", "2023", "2024"],
+      "cagr_label": "CAGR('20~'24)"
+    },
+    {
+      "kind": "category_timeseries_summary",
+      "source": "ltc_top_service",
+      "sheet_name": "전북_SUMMARY",
+      "filters": {"C1": ["15350AC400L1"], "C2": ["001"]},
+      "category_col": "C3_NM",
+      "row_label": "구분",
+      "category_order": ["계", "방문요양", "방문목욕", "방문간호", "주야간보호", "단기보호", "복지용구", "노인요양시설", "노인요양공동생활가정", "통합재가서비스"],
+      "years": ["2020", "2021", "2022", "2023", "2024"],
+      "cagr_label": "CAGR('20~'24)"
+    },
+    {
+      "kind": "category_timeseries_summary",
+      "source": "ltc_top_service",
+      "sheet_name": "전남_SUMMARY",
+      "filters": {"C1": ["15350AC400M1"], "C2": ["001"]},
+      "category_col": "C3_NM",
+      "row_label": "구분",
+      "category_order": ["계", "방문요양", "방문목욕", "방문간호", "주야간보호", "단기보호", "복지용구", "노인요양시설", "노인요양공동생활가정", "통합재가서비스"],
+      "years": ["2020", "2021", "2022", "2023", "2024"],
+      "cagr_label": "CAGR('20~'24)"
+    },
+    {
+      "kind": "category_timeseries_summary",
+      "source": "ltc_top_service",
+      "sheet_name": "경북_SUMMARY",
+      "filters": {"C1": ["15350AC400N1"], "C2": ["001"]},
+      "category_col": "C3_NM",
+      "row_label": "구분",
+      "category_order": ["계", "방문요양", "방문목욕", "방문간호", "주야간보호", "단기보호", "복지용구", "노인요양시설", "노인요양공동생활가정", "통합재가서비스"],
+      "years": ["2020", "2021", "2022", "2023", "2024"],
+      "cagr_label": "CAGR('20~'24)"
+    },
+    {
+      "kind": "category_timeseries_summary",
+      "source": "ltc_top_service",
+      "sheet_name": "경남_SUMMARY",
+      "filters": {"C1": ["15350AC400O1"], "C2": ["001"]},
+      "category_col": "C3_NM",
+      "row_label": "구분",
+      "category_order": ["계", "방문요양", "방문목욕", "방문간호", "주야간보호", "단기보호", "복지용구", "노인요양시설", "노인요양공동생활가정", "통합재가서비스"],
+      "years": ["2020", "2021", "2022", "2023", "2024"],
+      "cagr_label": "CAGR('20~'24)"
+    },
+    {
+      "kind": "category_timeseries_summary",
+      "source": "ltc_top_service",
+      "sheet_name": "제주_SUMMARY",
+      "filters": {"C1": ["15350AC400P1"], "C2": ["001"]},
+      "category_col": "C3_NM",
+      "row_label": "구분",
+      "category_order": ["계", "방문요양", "방문목욕", "방문간호", "주야간보호", "단기보호", "복지용구", "노인요양시설", "노인요양공동생활가정", "통합재가서비스"],
+      "years": ["2020", "2021", "2022", "2023", "2024"],
+      "cagr_label": "CAGR('20~'24)"
+    }
+  ]
+}

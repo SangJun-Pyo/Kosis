@@ -1,0 +1,96 @@
+{
+  "job_name": "1-21_가구부채_인천_광역비교",
+  "provider": "kosis_sources",
+
+  "sources": [
+    {
+      "name": "household_debt",
+      "orgId": "101",
+      "tblId": "DT_1HDAAA01",
+      "prdSe": "Y",
+      "newEstPrdCnt": 5,
+      "format": "json",
+      "jsonVD": "Y",
+      "itmId": "T01",
+      "objL1": "ALL",
+      "objL2": "ALL",
+      "objL3": "C01 C02 C03 C04 C05 C06 C0601 C0602 C08"
+    }
+  ],
+
+  "include_source_raw": false,
+  "output_subdir": "인구",
+  "output_prefix": "1-21_가구부채_인천_광역비교",
+
+  "views": [
+    {
+      "kind": "pivot",
+      "source": "household_debt",
+      "sheet_name": "인천 가구부채",
+      "filters": {
+        "C2": ["B0523"],
+        "C3": ["C01", "C02", "C03", "C04", "C05", "C06", "C08"],
+        "PRD_DE": ["2021", "2022", "2023", "2024", "2025"]
+      },
+      "index": ["C2_NM", "C3_NM"],
+      "columns": ["PRD_DE"],
+      "values": "DT",
+      "sort": false
+    },
+    {
+      "kind": "pivot",
+      "source": "household_debt",
+      "sheet_name": "광역비교",
+      "filters": {
+        "C2": ["B0500", "B0510", "B0511", "B0520", "B0521", "B0522", "B0523", "B0524", "B0525", "B0526", "B0529", "B0531", "B0532", "B0533", "B0534", "B0535", "B0536", "B0537", "B0538", "B0539"],
+        "C3": ["C01", "C05", "C06", "C0601", "C0602"],
+        "PRD_DE": ["2021", "2022", "2023", "2024", "2025"]
+      },
+      "index": ["C1_NM", "C2_NM"],
+      "columns": ["C3_NM", "PRD_DE"],
+      "values": "DT",
+      "preserve_multiindex_columns": true,
+      "sort": false
+    },
+    {
+      "kind": "rank_and_metric_block_summary",
+      "source": "household_debt",
+      "sheet_name": "SUMMARY_VIEW",
+      "filters": {
+        "C2": ["B0500", "B0511", "B0521", "B0522", "B0523", "B0524", "B0525", "B0526", "B0529", "B0531", "B0532", "B0533", "B0534", "B0535", "B0536", "B0537", "B0538", "B0539"],
+        "PRD_DE": ["2021", "2022", "2023", "2024", "2025"]
+      },
+      "region_col": "C2_NM",
+      "area_label": "구분",
+      "national_name": "전국",
+      "national_alias": "계",
+      "region_order": ["전국", "서울특별시", "부산광역시", "대구광역시", "인천광역시", "광주광역시", "대전광역시", "울산광역시", "세종특별자치시", "경기도", "강원특별자치도", "충청북도", "충청남도", "전북특별자치도", "전라남도", "경상북도", "경상남도", "제주특별자치도"],
+      "years": ["2021", "2022", "2023", "2024", "2025"],
+      "rank_metric": {
+        "label": "부채 (만원)",
+        "filters": {
+          "C3": ["C06"]
+        },
+        "rank_year": "2025",
+        "rank_label": "순위",
+        "cagr_label": "CAGR('21~'25)"
+      },
+      "metric_blocks": [
+        {
+          "label": "금융부채 (만원)",
+          "filters": {
+            "C3": ["C0601"]
+          },
+          "cagr_label": "CAGR('21~'25)"
+        },
+        {
+          "label": "임대보증금 (만원)",
+          "filters": {
+            "C3": ["C0602"]
+          },
+          "cagr_label": "CAGR('21~'25)"
+        }
+      ]
+    }
+  ]
+}

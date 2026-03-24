@@ -1,0 +1,81 @@
+{
+  "job_name": "1-16_이동사유별_인구이동_전국시군구_최근5년",
+  "provider": "kosis_sources",
+
+  "sources": [
+    {
+      "name": "migration_reason_a",
+      "orgId": "101",
+      "tblId": "DT_1B26B21",
+      "prdSe": "Y",
+      "newEstPrdCnt": 5,
+      "format": "json",
+      "jsonVD": "Y",
+      "itmId": "T10 T20 T25",
+      "objL1": "ALL",
+      "objL2": "ALL"
+    },
+    {
+      "name": "migration_reason_b",
+      "orgId": "101",
+      "tblId": "DT_1B26B21",
+      "prdSe": "Y",
+      "newEstPrdCnt": 5,
+      "format": "json",
+      "jsonVD": "Y",
+      "itmId": "T40 T50",
+      "objL1": "ALL",
+      "objL2": "ALL"
+    },
+    {
+      "name": "migration_reason_summary",
+      "orgId": "101",
+      "tblId": "DT_1B26B21",
+      "prdSe": "Y",
+      "newEstPrdCnt": 5,
+      "format": "json",
+      "jsonVD": "Y",
+      "itmId": "T10 T20",
+      "objL1": "00",
+      "objL2": "ALL"
+    }
+  ],
+
+  "output_subdir": "인구",
+  "output_prefix": "1-16_이동사유별_인구이동_전국시군구_최근5년",
+
+  "views": [
+    {
+      "kind": "pivot",
+      "sources": ["migration_reason_a", "migration_reason_b"],
+      "sheet_name": "이동사유별 인구 이동",
+      "preprocess": {
+        "dedupe_region_names": {
+          "code_col": "C1",
+          "name_col": "C1_NM",
+          "label_col": "C1_LABEL"
+        }
+      },
+      "index": ["C1_LABEL", "C2_NM"],
+      "columns": ["PRD_DE", "ITM_NM"],
+      "values": "DT",
+      "preserve_multiindex_columns": true,
+      "sort": false
+    },
+    {
+      "kind": "metric_block_summary",
+      "source": "migration_reason_summary",
+      "sheet_name": "SUMMARY_VIEW",
+      "row_col": "C2_NM",
+      "row_label": "구분",
+      "row_order": ["계", "직업", "가족", "주택", "교육", "주거환경", "자연환경", "기타"],
+      "item_ids": ["T10", "T20"],
+      "item_labels": {
+        "T10": "총전입",
+        "T20": "총전출"
+      },
+      "years": ["2021", "2022", "2023", "2024", "2025"],
+      "cagr_label": "CAGR('21~'25)"
+    }
+  ]
+}

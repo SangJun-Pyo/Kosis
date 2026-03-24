@@ -1,0 +1,433 @@
+{
+  "job_name": "1-19_의료시설_의료인력_광역시도별_현황",
+  "provider": "kosis_sources",
+  "include_source_raw": false,
+
+  "sources": [
+    {
+      "name": "facility",
+      "orgId": "354",
+      "tblId": "DT_HIRA4B",
+      "prdSe": "Q",
+      "newEstPrdCnt": 16,
+      "format": "json",
+      "jsonVD": "Y",
+      "itmId": "1635413103140064SC0",
+      "objL1": "1535413102140064HC3.00 1535413102140064HC3.11 1535413102140064HC3.21 1535413102140064HC3.22 1535413102140064HC3.23 1535413102140064HC3.24 1535413102140064HC3.25 1535413102140064HC3.26 1535413102140064HC3.41 1535413102140064HC3.31 1535413102140064HC3.32 1535413102140064HC3.33 1535413102140064HC3.34 1535413102140064HC3.35 1535413102140064HC3.36 1535413102140064HC3.37 1535413102140064HC3.38 1535413102140064HC3.39",
+      "objL2": "ALL"
+    },
+    {
+      "name": "personnel_main",
+      "orgId": "354",
+      "tblId": "DT_HIRA4T",
+      "prdSe": "Q",
+      "newEstPrdCnt": 16,
+      "format": "json",
+      "jsonVD": "Y",
+      "itmId": "1635413103140072AAA",
+      "objL1": "1535413102140072HC3.00 1535413102140072HC3.11 1535413102140072HC3.21 1535413102140072HC3.22 1535413102140072HC3.23 1535413102140072HC3.24 1535413102140072HC3.25 1535413102140072HC3.26 1535413102140072HC3.41 1535413102140072HC3.31 1535413102140072HC3.32 1535413102140072HC3.33 1535413102140072HC3.34 1535413102140072HC3.35 1535413102140072HC3.36 1535413102140072HC3.37 1535413102140072HC3.38 1535413102140072HC3.39",
+      "objL2": "ALL"
+    },
+    {
+      "name": "personnel_other",
+      "orgId": "354",
+      "tblId": "DT_HIRA4U",
+      "prdSe": "Q",
+      "newEstPrdCnt": 16,
+      "format": "json",
+      "jsonVD": "Y",
+      "itmId": "ALL",
+      "objL1": "ALL",
+      "objL2": "1535413102140072HC3.00 1535413102140072HC3.11 1535413102140072HC3.21 1535413102140072HC3.22 1535413102140072HC3.23 1535413102140072HC3.24 1535413102140072HC3.25 1535413102140072HC3.26 1535413102140072HC3.41 1535413102140072HC3.31 1535413102140072HC3.32 1535413102140072HC3.33 1535413102140072HC3.34 1535413102140072HC3.35 1535413102140072HC3.36 1535413102140072HC3.37 1535413102140072HC3.38 1535413102140072HC3.39"
+    }
+  ],
+
+  "output_subdir": "인구",
+  "output_prefix": "1-19_의료시설_의료인력_광역시도별_현황",
+
+  "views": [
+    {
+      "kind": "pivot",
+      "source": "facility",
+      "sheet_name": "의료시설 현황_RAW",
+      "preprocess": {
+        "quarter_pick_latest_or_q4": {
+          "source": "PRD_DE"
+        }
+      },
+      "index": ["C1_NM", "C2_NM"],
+      "columns": ["PRD_DE"],
+      "values": "DT",
+      "sort": false
+    },
+    {
+      "kind": "stack_blocks",
+      "sheet_name": "의료인력 현황_RAW",
+      "blocks": [
+        {
+          "title": "시군구별 의료인력현황(의사, 약사 등)",
+          "source": "personnel_main",
+          "kind": "pivot",
+          "preprocess": {
+            "quarter_pick_latest_or_q4": {
+              "source": "PRD_DE"
+            },
+            "hierarchy_map": {
+              "code_col": "C2",
+              "group_col": "GROUP_NM",
+              "detail_col": "DETAIL_NM",
+              "order_col": "DISPLAY_ORDER",
+              "mapping": {
+                "1535413102140072B02.0": {"group": "계", "detail": "", "order": 1},
+                "1535413102140072B02.1": {"group": "의사", "detail": "소계", "order": 10},
+                "1535413102140072B02.114": {"group": "의사", "detail": "전문의", "order": 11},
+                "1535413102140072B02.2": {"group": "치과의사", "detail": "소계", "order": 20},
+                "1535413102140072B02.214": {"group": "치과의사", "detail": "전문의", "order": 21},
+                "1535413102140072B02.3": {"group": "한의사", "detail": "소계", "order": 30},
+                "1535413102140072B02.314": {"group": "한의사", "detail": "전문의", "order": 31},
+                "1535413102140072B02.8": {"group": "조산사", "detail": "", "order": 40},
+                "1535413102140072B02.4": {"group": "약사", "detail": "", "order": 50},
+                "1535413102140072B02.A1": {"group": "한약사", "detail": "", "order": 60},
+                "1535413102140072B02.5": {"group": "물리치료사", "detail": "", "order": 70},
+                "1535413102140072B02.6": {"group": "작업치료사", "detail": "", "order": 80},
+                "1535413102140072B02.7": {"group": "사회복지사", "detail": "", "order": 90}
+              }
+            }
+          },
+          "index": ["C1_NM", "GROUP_NM", "DETAIL_NM"],
+          "columns": ["PRD_DE"],
+          "values": "DT",
+          "sort": false,
+          "blank_rows": 2
+        },
+        {
+          "title": "시군구별 의료인력현황(간호사 및 기타인원)",
+          "source": "personnel_other",
+          "kind": "pivot",
+          "preprocess": {
+            "quarter_pick_latest_or_q4": {
+              "source": "PRD_DE"
+            },
+            "hierarchy_map": {
+              "code_col": "C1_NM",
+              "group_col": "GROUP_NM",
+              "detail_col": "DETAIL_NM",
+              "order_col": "DISPLAY_ORDER",
+              "mapping": {
+                "전체": {"group": "계", "detail": "", "order": 1},
+                "간호사": {"group": "간호사", "detail": "", "order": 10},
+                "간호조무사": {"group": "간호조무사", "detail": "", "order": 20},
+                "임상병리사": {"group": "임상병리사", "detail": "", "order": 30},
+                "방사선사": {"group": "방사선사", "detail": "", "order": 40},
+                "치과기공사": {"group": "치과기공사", "detail": "", "order": 50},
+                "치과위생사": {"group": "치과위생사", "detail": "", "order": 60},
+                "보건의료정보관리사": {"group": "보건의료정보관리사", "detail": "", "order": 70},
+                "동위원소취급자(일반)": {"group": "동위원소취급자(일반)", "detail": "", "order": 80},
+                "동위원소취급자(특수)": {"group": "동위원소취급자(특수)", "detail": "", "order": 81},
+                "방사선취급감독자": {"group": "방사선취급감독자", "detail": "", "order": 82},
+                "영양사": {"group": "영양사", "detail": "", "order": 83},
+                "조리사": {"group": "조리사", "detail": "", "order": 84},
+                "조혈모세포이식담당자": {"group": "조혈모세포이식담당자", "detail": "", "order": 85},
+                "안경사": {"group": "안경사", "detail": "", "order": 86},
+                "정신건강전문요원": {"group": "정신건강전문요원", "detail": "", "order": 87},
+                "기타종사자": {"group": "기타종사자", "detail": "", "order": 88}
+              }
+            }
+          },
+          "index": ["C2_NM", "GROUP_NM", "DETAIL_NM"],
+          "columns": ["PRD_DE"],
+          "values": "DT",
+          "sort": false,
+          "blank_rows": 0
+        }
+      ]
+    },
+
+    {
+      "kind": "category_timeseries_summary",
+      "source": "facility",
+      "repeat_over": {
+        "items": [
+          {"region_name": "서울", "facility_code": "1535413102140064HC3.11", "personnel_code": "1535413102140072HC3.11"},
+          {"region_name": "부산", "facility_code": "1535413102140064HC3.21", "personnel_code": "1535413102140072HC3.21"},
+          {"region_name": "대구", "facility_code": "1535413102140064HC3.22", "personnel_code": "1535413102140072HC3.22"},
+          {"region_name": "인천", "facility_code": "1535413102140064HC3.23", "personnel_code": "1535413102140072HC3.23"},
+          {"region_name": "광주", "facility_code": "1535413102140064HC3.24", "personnel_code": "1535413102140072HC3.24"},
+          {"region_name": "대전", "facility_code": "1535413102140064HC3.25", "personnel_code": "1535413102140072HC3.25"},
+          {"region_name": "울산", "facility_code": "1535413102140064HC3.26", "personnel_code": "1535413102140072HC3.26"},
+          {"region_name": "세종", "facility_code": "1535413102140064HC3.41", "personnel_code": "1535413102140072HC3.41"},
+          {"region_name": "경기", "facility_code": "1535413102140064HC3.31", "personnel_code": "1535413102140072HC3.31"},
+          {"region_name": "강원", "facility_code": "1535413102140064HC3.32", "personnel_code": "1535413102140072HC3.32"},
+          {"region_name": "충북", "facility_code": "1535413102140064HC3.33", "personnel_code": "1535413102140072HC3.33"},
+          {"region_name": "충남", "facility_code": "1535413102140064HC3.34", "personnel_code": "1535413102140072HC3.34"},
+          {"region_name": "전북", "facility_code": "1535413102140064HC3.35", "personnel_code": "1535413102140072HC3.35"},
+          {"region_name": "전남", "facility_code": "1535413102140064HC3.36", "personnel_code": "1535413102140072HC3.36"},
+          {"region_name": "경북", "facility_code": "1535413102140064HC3.37", "personnel_code": "1535413102140072HC3.37"},
+          {"region_name": "경남", "facility_code": "1535413102140064HC3.38", "personnel_code": "1535413102140072HC3.38"},
+          {"region_name": "제주", "facility_code": "1535413102140064HC3.39", "personnel_code": "1535413102140072HC3.39"}
+        ]
+      },
+      "sheet_name": "{region_name}_의료시설현황",
+      "filters": {
+        "C1": ["{facility_code}"]
+      },
+      "preprocess": {
+        "quarter_pick_latest_or_q4": {
+          "source": "PRD_DE"
+        }
+      },
+      "category_col": "C2_NM",
+      "row_label": "구분",
+      "category_order": ["계", "상급종합병원", "종합병원", "병원", "요양병원", "정신병원", "의원", "치과병원", "치과의원", "조산원", "한방병원", "한의원", "보건의료원", "보건소", "보건지소", "보건진료소", "약국"],
+      "years": ["2022.4/4", "2023.4/4", "2024.4/4", "2025.4/4"],
+      "cagr_label": "CAGR('22~'25)"
+    },
+
+    {
+      "kind": "stack_blocks",
+      "repeat_over": {
+        "items": [
+          {"region_name": "서울", "facility_code": "1535413102140064HC3.11", "personnel_code": "1535413102140072HC3.11"},
+          {"region_name": "부산", "facility_code": "1535413102140064HC3.21", "personnel_code": "1535413102140072HC3.21"},
+          {"region_name": "대구", "facility_code": "1535413102140064HC3.22", "personnel_code": "1535413102140072HC3.22"},
+          {"region_name": "인천", "facility_code": "1535413102140064HC3.23", "personnel_code": "1535413102140072HC3.23"},
+          {"region_name": "광주", "facility_code": "1535413102140064HC3.24", "personnel_code": "1535413102140072HC3.24"},
+          {"region_name": "대전", "facility_code": "1535413102140064HC3.25", "personnel_code": "1535413102140072HC3.25"},
+          {"region_name": "울산", "facility_code": "1535413102140064HC3.26", "personnel_code": "1535413102140072HC3.26"},
+          {"region_name": "세종", "facility_code": "1535413102140064HC3.41", "personnel_code": "1535413102140072HC3.41"},
+          {"region_name": "경기", "facility_code": "1535413102140064HC3.31", "personnel_code": "1535413102140072HC3.31"},
+          {"region_name": "강원", "facility_code": "1535413102140064HC3.32", "personnel_code": "1535413102140072HC3.32"},
+          {"region_name": "충북", "facility_code": "1535413102140064HC3.33", "personnel_code": "1535413102140072HC3.33"},
+          {"region_name": "충남", "facility_code": "1535413102140064HC3.34", "personnel_code": "1535413102140072HC3.34"},
+          {"region_name": "전북", "facility_code": "1535413102140064HC3.35", "personnel_code": "1535413102140072HC3.35"},
+          {"region_name": "전남", "facility_code": "1535413102140064HC3.36", "personnel_code": "1535413102140072HC3.36"},
+          {"region_name": "경북", "facility_code": "1535413102140064HC3.37", "personnel_code": "1535413102140072HC3.37"},
+          {"region_name": "경남", "facility_code": "1535413102140064HC3.38", "personnel_code": "1535413102140072HC3.38"},
+          {"region_name": "제주", "facility_code": "1535413102140064HC3.39", "personnel_code": "1535413102140072HC3.39"}
+        ]
+      },
+      "sheet_name": "{region_name}_의료인력현황",
+      "blocks": [
+        {
+          "source": "personnel_main",
+          "kind": "hierarchy_timeseries_summary",
+          "filters": {
+            "C1": ["{personnel_code}"]
+          },
+          "preprocess": {
+            "quarter_pick_latest_or_q4": {
+              "source": "PRD_DE"
+            },
+            "hierarchy_map": {
+              "code_col": "C2",
+              "group_col": "GROUP_NM",
+              "detail_col": "DETAIL_NM",
+              "order_col": "DISPLAY_ORDER",
+              "mapping": {
+                "1535413102140072B02.0": {"group": "계", "detail": "", "order": 1},
+                "1535413102140072B02.1": {"group": "의사", "detail": "소계", "order": 10},
+                "1535413102140072B02.114": {"group": "의사", "detail": "전문의", "order": 11},
+                "1535413102140072B02.2": {"group": "치과의사", "detail": "소계", "order": 20},
+                "1535413102140072B02.214": {"group": "치과의사", "detail": "전문의", "order": 21},
+                "1535413102140072B02.3": {"group": "한의사", "detail": "소계", "order": 30},
+                "1535413102140072B02.314": {"group": "한의사", "detail": "전문의", "order": 31},
+                "1535413102140072B02.8": {"group": "조산사", "detail": "", "order": 40},
+                "1535413102140072B02.4": {"group": "약사", "detail": "", "order": 50},
+                "1535413102140072B02.A1": {"group": "한약사", "detail": "", "order": 60},
+                "1535413102140072B02.5": {"group": "물리치료사", "detail": "", "order": 70},
+                "1535413102140072B02.6": {"group": "작업치료사", "detail": "", "order": 80},
+                "1535413102140072B02.7": {"group": "사회복지사", "detail": "", "order": 90}
+              }
+            }
+          },
+          "group_col": "GROUP_NM",
+          "detail_col": "DETAIL_NM",
+          "order_col": "DISPLAY_ORDER",
+          "group_label": "구분",
+          "detail_label": "세부",
+          "years": ["2022.4/4", "2023.4/4", "2024.4/4", "2025.4/4"],
+          "cagr_label": "CAGR('22~'25)",
+          "blank_rows": 1
+        },
+        {
+          "source": "personnel_other",
+          "kind": "hierarchy_timeseries_summary",
+          "filters": {
+            "C2": ["{personnel_code}"]
+          },
+          "preprocess": {
+            "quarter_pick_latest_or_q4": {
+              "source": "PRD_DE"
+            },
+            "hierarchy_map": {
+              "code_col": "C1_NM",
+              "group_col": "GROUP_NM",
+              "detail_col": "DETAIL_NM",
+              "order_col": "DISPLAY_ORDER",
+              "mapping": {
+                "간호사": {"group": "간호사", "detail": "", "order": 100},
+                "간호조무사": {"group": "간호조무사", "detail": "", "order": 110},
+                "임상병리사": {"group": "임상병리사", "detail": "", "order": 120},
+                "방사선사": {"group": "방사선사", "detail": "", "order": 130},
+                "정신건강전문요원": {"group": "정신건강전문요원", "detail": "", "order": 140}
+              }
+            }
+          },
+          "group_col": "GROUP_NM",
+          "detail_col": "DETAIL_NM",
+          "order_col": "DISPLAY_ORDER",
+          "group_label": "구분",
+          "detail_label": "세부",
+          "years": ["2022.4/4", "2023.4/4", "2024.4/4", "2025.4/4"],
+          "cagr_label": "CAGR('22~'25)"
+        }
+      ]
+    },
+
+    {
+      "kind": "stack_blocks",
+      "repeat_over": {
+        "items": [
+          {"region_name": "서울", "facility_code": "1535413102140064HC3.11", "personnel_code": "1535413102140072HC3.11"},
+          {"region_name": "부산", "facility_code": "1535413102140064HC3.21", "personnel_code": "1535413102140072HC3.21"},
+          {"region_name": "대구", "facility_code": "1535413102140064HC3.22", "personnel_code": "1535413102140072HC3.22"},
+          {"region_name": "인천", "facility_code": "1535413102140064HC3.23", "personnel_code": "1535413102140072HC3.23"},
+          {"region_name": "광주", "facility_code": "1535413102140064HC3.24", "personnel_code": "1535413102140072HC3.24"},
+          {"region_name": "대전", "facility_code": "1535413102140064HC3.25", "personnel_code": "1535413102140072HC3.25"},
+          {"region_name": "울산", "facility_code": "1535413102140064HC3.26", "personnel_code": "1535413102140072HC3.26"},
+          {"region_name": "세종", "facility_code": "1535413102140064HC3.41", "personnel_code": "1535413102140072HC3.41"},
+          {"region_name": "경기", "facility_code": "1535413102140064HC3.31", "personnel_code": "1535413102140072HC3.31"},
+          {"region_name": "강원", "facility_code": "1535413102140064HC3.32", "personnel_code": "1535413102140072HC3.32"},
+          {"region_name": "충북", "facility_code": "1535413102140064HC3.33", "personnel_code": "1535413102140072HC3.33"},
+          {"region_name": "충남", "facility_code": "1535413102140064HC3.34", "personnel_code": "1535413102140072HC3.34"},
+          {"region_name": "전북", "facility_code": "1535413102140064HC3.35", "personnel_code": "1535413102140072HC3.35"},
+          {"region_name": "전남", "facility_code": "1535413102140064HC3.36", "personnel_code": "1535413102140072HC3.36"},
+          {"region_name": "경북", "facility_code": "1535413102140064HC3.37", "personnel_code": "1535413102140072HC3.37"},
+          {"region_name": "경남", "facility_code": "1535413102140064HC3.38", "personnel_code": "1535413102140072HC3.38"},
+          {"region_name": "제주", "facility_code": "1535413102140064HC3.39", "personnel_code": "1535413102140072HC3.39"}
+        ]
+      },
+      "sheet_name": "{region_name}_통합현황",
+      "blocks": [
+        {
+          "source": "facility",
+          "kind": "hierarchy_timeseries_summary",
+          "filters": {
+            "C1": ["{facility_code}"]
+          },
+          "preprocess": {
+            "quarter_pick_latest_or_q4": {
+              "source": "PRD_DE"
+            },
+            "hierarchy_map": {
+              "code_col": "C2_NM",
+              "group_col": "GROUP_NM",
+              "detail_col": "DETAIL_NM",
+              "order_col": "DISPLAY_ORDER",
+              "mapping": {
+                "계": {"group": "의료시설", "detail": "계", "order": 1},
+                "상급종합병원": {"group": "의료기관", "detail": "상급종합병원", "order": 10},
+                "종합병원": {"group": "의료기관", "detail": "종합병원", "order": 11},
+                "병원": {"group": "의료기관", "detail": "병원", "order": 12},
+                "요양병원": {"group": "의료기관", "detail": "요양병원", "order": 13},
+                "정신병원": {"group": "의료기관", "detail": "정신병원", "order": 14},
+                "의원": {"group": "의료기관", "detail": "의원", "order": 15},
+                "치과병원": {"group": "의료기관", "detail": "치과병원", "order": 16},
+                "치과의원": {"group": "의료기관", "detail": "치과의원", "order": 17},
+                "조산원": {"group": "의료기관", "detail": "조산원", "order": 18},
+                "한방병원": {"group": "의료기관", "detail": "한방병원", "order": 19},
+                "한의원": {"group": "의료기관", "detail": "한의원", "order": 20},
+                "보건의료원": {"group": "보건기관", "detail": "보건의료원", "order": 30},
+                "보건소": {"group": "보건기관", "detail": "보건소", "order": 31},
+                "보건지소": {"group": "보건기관", "detail": "보건지소", "order": 32},
+                "보건진료소": {"group": "보건기관", "detail": "보건진료소", "order": 33},
+                "약국": {"group": "약국", "detail": "", "order": 40}
+              }
+            }
+          },
+          "group_col": "GROUP_NM",
+          "detail_col": "DETAIL_NM",
+          "order_col": "DISPLAY_ORDER",
+          "group_label": "구분",
+          "detail_label": "세부",
+          "years": ["2022.4/4", "2023.4/4", "2024.4/4", "2025.4/4"],
+          "cagr_label": "CAGR('22~'25)",
+          "blank_rows": 1
+        },
+        {
+          "source": "personnel_main",
+          "kind": "hierarchy_timeseries_summary",
+          "filters": {
+            "C1": ["{personnel_code}"]
+          },
+          "preprocess": {
+            "quarter_pick_latest_or_q4": {
+              "source": "PRD_DE"
+            },
+            "hierarchy_map": {
+              "code_col": "C2",
+              "group_col": "GROUP_NM",
+              "detail_col": "DETAIL_NM",
+              "order_col": "DISPLAY_ORDER",
+              "mapping": {
+                "1535413102140072B02.0": {"group": "의료인력", "detail": "계", "order": 50},
+                "1535413102140072B02.1": {"group": "의사", "detail": "소계", "order": 60},
+                "1535413102140072B02.114": {"group": "의사", "detail": "전문의", "order": 61},
+                "1535413102140072B02.2": {"group": "치과의사", "detail": "소계", "order": 70},
+                "1535413102140072B02.214": {"group": "치과의사", "detail": "전문의", "order": 71},
+                "1535413102140072B02.3": {"group": "한의사", "detail": "소계", "order": 80},
+                "1535413102140072B02.314": {"group": "한의사", "detail": "전문의", "order": 81},
+                "1535413102140072B02.8": {"group": "조산사", "detail": "", "order": 82},
+                "1535413102140072B02.4": {"group": "약사", "detail": "", "order": 83},
+                "1535413102140072B02.A1": {"group": "한약사", "detail": "", "order": 84},
+                "1535413102140072B02.5": {"group": "물리치료사", "detail": "", "order": 85},
+                "1535413102140072B02.6": {"group": "작업치료사", "detail": "", "order": 86},
+                "1535413102140072B02.7": {"group": "사회복지사", "detail": "", "order": 87}
+              }
+            }
+          },
+          "group_col": "GROUP_NM",
+          "detail_col": "DETAIL_NM",
+          "order_col": "DISPLAY_ORDER",
+          "group_label": "구분",
+          "detail_label": "세부",
+          "years": ["2022.4/4", "2023.4/4", "2024.4/4", "2025.4/4"],
+          "cagr_label": "CAGR('22~'25)",
+          "blank_rows": 1
+        },
+        {
+          "source": "personnel_other",
+          "kind": "hierarchy_timeseries_summary",
+          "filters": {
+            "C2": ["{personnel_code}"]
+          },
+          "preprocess": {
+            "quarter_pick_latest_or_q4": {
+              "source": "PRD_DE"
+            },
+            "hierarchy_map": {
+              "code_col": "C1_NM",
+              "group_col": "GROUP_NM",
+              "detail_col": "DETAIL_NM",
+              "order_col": "DISPLAY_ORDER",
+              "mapping": {
+                "간호사": {"group": "간호사", "detail": "", "order": 90},
+                "간호조무사": {"group": "간호조무사", "detail": "", "order": 91},
+                "임상병리사": {"group": "임상병리사", "detail": "", "order": 92},
+                "방사선사": {"group": "방사선사", "detail": "", "order": 93},
+                "정신건강전문요원": {"group": "정신건강전문요원", "detail": "", "order": 94}
+              }
+            }
+          },
+          "group_col": "GROUP_NM",
+          "detail_col": "DETAIL_NM",
+          "order_col": "DISPLAY_ORDER",
+          "group_label": "구분",
+          "detail_label": "세부",
+          "years": ["2022.4/4", "2023.4/4", "2024.4/4", "2025.4/4"],
+          "cagr_label": "CAGR('22~'25)"
+        }
+      ]
+    }
+  ]
+}

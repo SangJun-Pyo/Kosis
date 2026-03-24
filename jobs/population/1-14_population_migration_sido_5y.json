@@ -1,0 +1,41 @@
+{
+  "job_name": "1-14_인구이동_광역비교_최근5년",
+  "provider": "kosis",
+
+  "orgId": "101",
+  "tblId": "DT_1B26001_A01",
+
+  "prdSe": "Y",
+  "newEstPrdCnt": 5,
+
+  "itmId": "T10 T20 T25 T30 T31 T32 T40 T50",
+  "objL1": "00 11 26 27 28 29 30 31 36 41 51 43 44 52 46 47 48 50",
+
+  "output_subdir": "인구",
+  "output_prefix": "1-14_인구이동_광역비교_최근5년",
+
+  "pivot": {
+    "index": ["C1_NM"],
+    "columns": ["PRD_DE", "ITM_NM"],
+    "values": "DT",
+    "sheet_name": "인구이동",
+    "preserve_multiindex_columns": true,
+    "sort": false
+  },
+
+  "extra_pivots": [
+    {
+      "kind": "metric_summary",
+      "sheet_name": "SUMMARY_VIEW",
+      "filters": {
+        "C1": ["00"]
+      },
+      "item_ids": ["T10", "T20", "T25", "T30", "T31", "T32", "T40", "T50"],
+      "years": ["2021", "2022", "2023", "2024", "2025"],
+      "include_share": false,
+      "annual_change_label": "연평균변화량('21~'25)",
+      "annual_change_item_ids": ["T25"],
+      "cagr_label": "CAGR('21~'25)"
+    }
+  ]
+}

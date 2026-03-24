@@ -34,6 +34,10 @@ if exist "secrets.local.bat" (
   call secrets.local.bat
 )
 
+if "%KOSIS_API_KEY%"=="" (
+  set "KOSIS_API_KEY=ODI0NjBhZTA5Njk4YTA0ZmRmNDgzMTAxYWUzZjA4NzY="
+)
+
 call %PY_CMD% -c "import requests, pandas, openpyxl" >nul 2>&1
 if errorlevel 1 (
   echo [INFO] Installing required Python packages...

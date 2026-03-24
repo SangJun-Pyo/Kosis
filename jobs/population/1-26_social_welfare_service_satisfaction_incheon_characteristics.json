@@ -1,0 +1,69 @@
+{
+  "job_name": "1-26_사회복지서비스만족도_인천_특성별",
+  "provider": "kosis_sources",
+
+  "sources": [
+    {
+      "name": "welfare_satisfaction",
+      "orgId": "204",
+      "tblId": "DT_204010_2024A102",
+      "prdSe": "Y",
+      "startPrdDe": "2024",
+      "endPrdDe": "2024",
+      "format": "json",
+      "jsonVD": "Y",
+      "itmId": "T001",
+      "objL1": "ALL",
+      "objL2": "ALL",
+      "objL3": "ALL"
+    }
+  ],
+
+  "include_source_raw": false,
+  "output_subdir": "인구",
+  "output_prefix": "1-26_사회복지서비스만족도_인천_특성별",
+
+  "views": [
+    {
+      "kind": "pivot",
+      "source": "welfare_satisfaction",
+      "repeat_over": {
+        "items": [
+          {"sheet": "전체", "codes": ["A01"]},
+          {"sheet": "군구별", "codes": ["A01", "A0201", "A0202", "A0203", "A0204", "A0205", "A0206", "A0207", "A0208", "A0209", "A0210"]},
+          {"sheet": "성별", "codes": ["A01", "A0301", "A0302"]},
+          {"sheet": "연령별", "codes": ["A01", "A0401", "A0402", "A0403", "A0404", "A0405", "A0406"]},
+          {"sheet": "학력별", "codes": ["A01", "A0501", "A0502", "A0503", "A0504"]},
+          {"sheet": "직업별", "codes": ["A01", "A0601", "A0602", "A0603", "A0604", "A0605", "A0606", "A0607", "A0608"]},
+          {"sheet": "월평균소득", "codes": ["A01", "A0701", "A0702", "A0703", "A0704", "A0705", "A0706", "A0707", "A0708"]},
+          {"sheet": "주거형태", "codes": ["A01", "A0801", "A0802", "A0803", "A0804"]},
+          {"sheet": "주거점유", "codes": ["A01", "A0901", "A0902", "A0903"]},
+          {"sheet": "가구원수", "codes": ["A01", "A1001", "A1002", "A1003", "A1004", "A1005"]}
+        ]
+      },
+      "sheet_name": "{sheet}",
+      "filters": {
+        "C1": "{codes}",
+        "PRD_DE": ["2024"]
+      },
+      "index": ["C1_NM"],
+      "columns": ["C2_NM", "C3_NM"],
+      "values": "DT",
+      "preserve_multiindex_columns": true,
+      "sort": false
+    },
+    {
+      "kind": "pivot",
+      "source": "welfare_satisfaction",
+      "sheet_name": "SUMMARY_VIEW",
+      "filters": {
+        "C1": ["A01"],
+        "PRD_DE": ["2024"]
+      },
+      "index": ["C2_NM"],
+      "columns": ["C3_NM"],
+      "values": "DT",
+      "sort": false
+    }
+  ]
+}

@@ -1,23 +1,57 @@
 {
   "job_name": "1-02_주민등록인구_전체행정구역_총인구_최근5년",
-  "provider": "kosis",
-
-  "orgId": "101",
-  "tblId": "DT_1B040A3",
-  "prdSe": "Y",
-  "newEstPrdCnt": 5,
-
-  "itmId": "T20",
-  "objL1": "ALL",
-
+  "provider": "kosis_sources",
+  "include_source_raw": true,
+  "sources": [
+    {
+      "name": "population_yearly",
+      "orgId": "101",
+      "tblId": "DT_1B040A3",
+      "prdSe": "Y",
+      "newEstPrdCnt": 5,
+      "itmId": "T20",
+      "objL1": "ALL"
+    }
+  ],
   "output_subdir": "인구",
   "output_prefix": "1-02_인구_전체행정구역_총인구_최근5년",
-
-  "pivot": {
-    "index": ["C1_NM"],
-    "columns": ["PRD_DE"],
-    "values": "DT",
-    "sheet_name": "TABLE_VIEW",
-    "flatten_columns_year": false
-  }
+  "views": [
+    {
+      "kind": "pivot",
+      "source": "population_yearly",
+      "sheet_name": "TABLE_VIEW",
+      "index": ["C1_NM"],
+      "columns": ["PRD_DE"],
+      "values": "DT",
+      "sort": false
+    },
+    {
+      "kind": "single_metric_share_summary",
+      "source": "population_yearly",
+      "sheet_name": "SUMMARY_VIEW",
+      "region_col": "C1_NM",
+      "years": ["2021", "2022", "2023", "2024", "2025"],
+      "filters": {
+        "ITM_ID": ["T20"]
+      },
+      "area_label": "구분",
+      "national_name": "인천광역시",
+      "national_alias": "인천광역시",
+      "share_year": "2025",
+      "cagr_label": "CAGR('21~'25)",
+      "region_order": [
+        "인천광역시",
+        "중구",
+        "동구",
+        "미추홀구",
+        "연수구",
+        "남동구",
+        "부평구",
+        "계양구",
+        "서구",
+        "강화군",
+        "옹진군"
+      ]
+    }
+  ]
 }

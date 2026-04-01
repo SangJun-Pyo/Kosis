@@ -1,75 +1,40 @@
 # Kosis-main
 
-KOSIS Open API 데이터를 내려받아 `jobs/*.json` 설정에 따라 엑셀 파일로 저장하는 프로젝트입니다.
-
-필요한 패키지는 프로젝트 내부 `.deps` 폴더에 자동 설치됩니다.
+KOSIS / data.go.kr OpenAPI 데이터를 `jobs/*.json` 설정으로 수집하고, 엑셀(`.xlsx`)로 내보내는 프로젝트입니다.
 
 ## 빠른 시작
 
-### 1. Python 확인
+### 실행 (권장)
+- 전체 실행: `run_jobs.bat`
 
-Python 3.13 이상이 설치되어 있어야 합니다.
+처음 실행 시 `run_jobs.bat`가:
+- `.deps` 폴더 생성
+- `requirements.txt` 패키지 설치
+- `runner.py` 실행
+을 자동으로 처리합니다.
 
-```powershell
-py -3.13 --version
-```
+## 프로젝트 구조
 
-또는
+- `runner.py`: 수집/가공/엑셀 저장 메인 실행기
+- `run_jobs.bat`: 공통 실행 배치
+- `jobs/`: job JSON
+- `output/`: 결과 엑셀 출력
+- `requirements.txt`: 필수 패키지
 
-```powershell
-python --version
-```
+## API 키
 
-### 2. 실행
+`run_jobs.bat`는 아래 순서로 API 키를 결정합니다.
+1. `secrets.local.bat` 값
+2. 이미 설정된 시스템 환경변수
+3. 배치 내부 기본값
 
-- 전체 실행: `run_all.bat`
-- 인구 파트만 실행: `run_population.bat`
-- 경제/산업 파트만 실행: `run_economy_industry.bat`
-- 고용/노동 파트만 실행: `run_employment_labor.bat`
-- 관광/문화 파트만 실행: `run_tourism_culture.bat`
+## 실행 결과
 
-배치 파일을 실행하면 자동으로:
+결과 파일은 `output\{output_subdir}\{output_prefix}_YYYYMMDD.xlsx` 형태로 저장됩니다.
 
-- Python 확인
-- `.deps` 생성
-- `requests`, `pandas`, `openpyxl` 설치
-- KOSIS job 실행
-- `output` 폴더에 엑셀 저장
+같은 파일이 열려 있으면 자동으로 `_01`, `_02` suffix를 붙여 저장합니다.
 
-## 결과 파일 위치
+## 주의
 
-- 결과 파일은 `output/` 폴더 아래에 저장됩니다.
-- 예: `output\인구\...xlsx`
-
-## 주요 파일
-
-- `run_jobs.bat`
-  공통 실행기
-- `run_all.bat`
-  전체 job 실행
-- `run_population.bat`
-  인구 파트 실행
-- `runner.py`
-  API 호출, 전처리, 피벗, 엑셀 저장 담당
-- `jobs/`
-  job JSON 모음
-
-## 폴더 구조
-
-```text
-jobs/
-  population/
-  economy_industry/
-  employment_labor/
-  tourism_culture/
-
-output/
-.deps/
-runner.py
-run_all.bat
-run_jobs.bat
-```
-
-## 참고
-
-더 자세한 설치/운영 가이드는 [SETUP_GUIDE.md](C:/Users/sangj/Kosis-main/Kosis-main/SETUP_GUIDE.md)를 보면 됩니다.
+- `python runner.py ...` 직접 실행 시 패키지 자동 설치가 동작하지 않을 수 있습니다. 배치 실행을 권장합니다.
+- 네트워크/방화벽 상태에 따라 KOSIS 호출이 일시 실패할 수 있으며, 기본 재시도 로직이 적용됩니다.

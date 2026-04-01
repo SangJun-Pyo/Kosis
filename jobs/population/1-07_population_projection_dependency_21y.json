@@ -1,20 +1,15 @@
 {
   "job_name": "1-07_장래인구추계_시군구별_인구구조부양비_최근21년",
   "provider": "kosis",
-
   "orgId": "101",
   "tblId": "INH_PB0003_2022_23",
-
   "prdSe": "Y",
   "newEstPrdCnt": 21,
-
   "itmId": "T10",
   "objL1": "ALL",
   "objL2": "ALL",
-
   "output_subdir": "인구",
   "output_prefix": "1-07_장래인구추계_시군구별_인구구조부양비_최근21년",
-
   "pivot": {
     "index": ["C1_NM", "C2_NM"],
     "columns": ["PRD_DE"],
@@ -22,5 +17,32 @@
     "sheet_name": "TABLE_VIEW",
     "flatten_columns_year": false,
     "sort": false
-  }
+  },
+  "extra_pivots": [
+    {
+      "kind": "category_compare_summary",
+      "sheet_name": "SUMMARY_VIEW",
+      "category_col": "C2_NM",
+      "years": ["2025", "2030", "2035", "2040"],
+      "filters": {
+        "C1_NM": ["인천"]
+      },
+      "group_col_name": "구분",
+      "detail_col_name": "세부",
+      "cagr_label": "CAGR('25~'40)",
+      "annual_change_label": "연평균변화량('25~'40)",
+      "annual_change_categories": ["인구성장률(%)"],
+      "row_defs": [
+        { "group": "총 인구", "detail": "", "category": "총인구(명)" },
+        { "group": "성별", "detail": "남성", "category": "남자(명)" },
+        { "group": "", "detail": "여성", "category": "여자(명)" },
+        { "group": "", "detail": "성비", "category": "성비(여자1백명당)" },
+        { "group": "인구성장률", "detail": "", "category": "인구성장률(%)" },
+        { "group": "부양비", "detail": "총부양비", "category": "총부양비" },
+        { "group": "", "detail": "유소년부양비", "category": "유소년부양비" },
+        { "group": "", "detail": "노년부양비", "category": "노년부양비" },
+        { "group": "노령화지수", "detail": "", "category": "노령화지수" }
+      ]
+    }
+  ]
 }

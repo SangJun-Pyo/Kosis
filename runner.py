@@ -1,4 +1,4 @@
-import os
+﻿import os
 import json
 import re
 import sys
@@ -252,6 +252,67 @@ def apply_preprocess(df: pd.DataFrame, job: dict) -> pd.DataFrame:
             sort_cols = [c for c in ["C1_NM", src, "PRD_DE", "ITM_NM"] if c in d.columns]
             if sort_cols:
                 d = d.sort_values(sort_cols, kind="stable")
+
+    quarter_cfg = cfg.get("quarter_pick_latest_or_q4")
+    if quarter_cfg:
+        if not isinstance(quarter_cfg, dict):
+            raise RuntimeError("preprocess.quarter_pick_latest_or_q4 must be a dict")
+        src_col = str(quarter_cfg.get("source", "PRD_DE"))
+        if src_col not in d.columns:
+            raise RuntimeError(f"quarter_pick_latest_or_q4 source column missing: {src_col}")
+
+        def _parse_quarter(v: Any) -> Tuple[int, int]:
+            s = str(v).strip()
+            m = re.match(r"^(\d{4})\.(\d)/4$", s)
+            if m:
+                return int(m.group(1)), int(m.group(2))
+            if re.match(r"^\d{4}$", s):
+                return int(s), 4
+            return -1, -1
+
+        picked: Dict[int, Tuple[int, str]] = {}
+        for raw in d[src_col].astype(str):
+            y, q = _parse_quarter(raw)
+            if y < 0:
+                continue
+            prev = picked.get(y)
+            if prev is None or q > prev[0]:
+                picked[y] = (q, raw)
+        keep = {v for _, v in picked.values()}
+        if keep:
+            d = d[d[src_col].astype(str).isin(keep)].copy()
+
+    hierarchy_cfg = cfg.get("hierarchy_map")
+    if hierarchy_cfg:
+        if not isinstance(hierarchy_cfg, dict):
+            raise RuntimeError("preprocess.hierarchy_map must be a dict")
+        code_col = str(hierarchy_cfg.get("code_col", "C2"))
+        group_col = str(hierarchy_cfg.get("group_col", "GROUP_NM"))
+        detail_col = str(hierarchy_cfg.get("detail_col", "DETAIL_NM"))
+        order_col = str(hierarchy_cfg.get("order_col", "DISPLAY_ORDER"))
+        mapping = hierarchy_cfg.get("mapping", {})
+        if code_col not in d.columns:
+            raise RuntimeError(f"hierarchy_map code column missing: {code_col}")
+        if not isinstance(mapping, dict):
+            raise RuntimeError("hierarchy_map.mapping must be a dict")
+
+        map_norm = {str(k): v for k, v in mapping.items() if isinstance(v, dict)}
+        d[group_col] = pd.NA
+        d[detail_col] = pd.NA
+        d[order_col] = pd.NA
+
+        def _apply_map(rec: pd.Series) -> pd.Series:
+            k = str(rec[code_col])
+            m = map_norm.get(k)
+            if not m:
+                return rec
+            rec[group_col] = m.get("group", pd.NA)
+            rec[detail_col] = m.get("detail", pd.NA)
+            rec[order_col] = m.get("order", pd.NA)
+            return rec
+
+        d = d.apply(_apply_map, axis=1)
+        d = d[d[group_col].notna()].copy()
 
     return d
 
@@ -1303,6 +1364,400 @@ def make_age_distribution_summary_pivot(df: pd.DataFrame, pivot_cfg: dict) -> pd
     return pd.concat([left, spacer, right], axis=1)
 
 
+def make_single_metric_share_summary_pivot(df: pd.DataFrame, pivot_cfg: dict) -> pd.DataFrame:
+    required = ["PRD_DE", "DT"]
+    missing = [c for c in required if c not in df.columns]
+    if missing:
+        raise RuntimeError(f"single_metric_share_summary columns missing: {missing}")
+
+    region_col = str(pivot_cfg.get("region_col", "C1_NM"))
+    if region_col not in df.columns:
+        raise RuntimeError(f"single_metric_share_summary region column missing: {region_col}")
+
+    years = [str(y) for y in pivot_cfg.get("years", [])]
+    if not years:
+        raise RuntimeError("single_metric_share_summary requires non-empty years")
+
+    d = df.copy()
+    d["PRD_DE"] = d["PRD_DE"].astype(str)
+    d = d[d["PRD_DE"].isin(years)].copy()
+
+    filters = pivot_cfg.get("filters", {})
+    for col, vals in filters.items():
+        if col in d.columns:
+            d = d[d[col].astype(str).isin([str(v) for v in vals])].copy()
+
+    d["DT"] = pd.to_numeric(d["DT"], errors="coerce")
+    d[region_col] = d[region_col].astype(str)
+
+    pv = d.pivot_table(
+        index=region_col,
+        columns="PRD_DE",
+        values="DT",
+        aggfunc="first",
+        sort=False,
+        observed=True,
+    )
+    for year in years:
+        if year not in pv.columns:
+            pv[year] = pd.NA
+    pv = pv[years]
+
+    national_name = str(pivot_cfg.get("national_name", "전국"))
+    national_alias = str(pivot_cfg.get("national_alias", "계"))
+    area_label = str(pivot_cfg.get("area_label", "구분"))
+    share_year = str(pivot_cfg.get("share_year", years[-1]))
+    cagr_label = str(pivot_cfg.get("cagr_label", f"CAGR('{years[0][2:]}~'{years[-1][2:]})"))
+    periods = max(int(years[-1]) - int(years[0]), 1)
+    region_order = [str(x) for x in pivot_cfg.get("region_order", [])]
+    if not region_order:
+        region_order = list(pv.index.astype(str))
+
+    national_val = pd.to_numeric(pv.loc[national_name, share_year], errors="coerce") if national_name in pv.index else pd.NA
+
+    rows: List[Dict[str, Any]] = []
+    for region in region_order:
+        if region not in pv.index:
+            continue
+        rec = pv.loc[region]
+        row: Dict[str, Any] = {area_label: national_alias if region == national_name else region}
+        for year in years:
+            row[f"{year}년"] = rec.get(year)
+
+        latest_val = pd.to_numeric(rec.get(share_year), errors="coerce")
+        start_val = pd.to_numeric(rec.get(years[0]), errors="coerce")
+        end_val = pd.to_numeric(rec.get(years[-1]), errors="coerce")
+        row["비중"] = (
+            round((latest_val / national_val) * 100, 1)
+            if pd.notna(latest_val) and pd.notna(national_val) and national_val not in (0, 0.0)
+            else pd.NA
+        )
+        row[cagr_label] = (
+            round((((end_val / start_val) ** (1 / periods)) - 1) * 100, 1)
+            if pd.notna(start_val) and pd.notna(end_val) and start_val > 0 and end_val > 0
+            else pd.NA
+        )
+        rows.append(row)
+
+    subtotals = pivot_cfg.get("subtotals", [])
+    if not subtotals and pivot_cfg.get("subtotal"):
+        subtotals = [pivot_cfg["subtotal"]]
+    for subtotal in subtotals:
+        members = [str(x) for x in subtotal.get("members", []) if str(x) in pv.index]
+        if not members:
+            continue
+        subtotal_vals = pv.loc[members, years].apply(pd.to_numeric, errors="coerce").sum(axis=0, min_count=1)
+        row = {area_label: str(subtotal.get("label", "소계"))}
+        for year in years:
+            row[f"{year}년"] = subtotal_vals.get(year)
+        latest_val = pd.to_numeric(subtotal_vals.get(share_year), errors="coerce")
+        start_val = pd.to_numeric(subtotal_vals.get(years[0]), errors="coerce")
+        end_val = pd.to_numeric(subtotal_vals.get(years[-1]), errors="coerce")
+        row["비중"] = (
+            round((latest_val / national_val) * 100, 1)
+            if pd.notna(latest_val) and pd.notna(national_val) and national_val not in (0, 0.0)
+            else pd.NA
+        )
+        row[cagr_label] = (
+            round((((end_val / start_val) ** (1 / periods)) - 1) * 100, 1)
+            if pd.notna(start_val) and pd.notna(end_val) and start_val > 0 and end_val > 0
+            else pd.NA
+        )
+        rows.append(row)
+
+    return pd.DataFrame(rows, columns=[area_label] + [f"{y}년" for y in years] + ["비중", cagr_label])
+
+
+def make_category_timeseries_summary_pivot(df: pd.DataFrame, pivot_cfg: dict) -> pd.DataFrame:
+    required = ["PRD_DE", "DT"]
+    missing = [c for c in required if c not in df.columns]
+    if missing:
+        raise RuntimeError(f"category_timeseries_summary columns missing: {missing}")
+
+    category_col = str(pivot_cfg.get("category_col", "C2_NM"))
+    if category_col not in df.columns:
+        raise RuntimeError(f"category_timeseries_summary category column missing: {category_col}")
+
+    years = [str(y) for y in pivot_cfg.get("years", [])]
+    if not years:
+        raise RuntimeError("category_timeseries_summary requires years")
+
+    d = df.copy()
+    d["PRD_DE"] = d["PRD_DE"].astype(str)
+    d["DT"] = pd.to_numeric(d["DT"], errors="coerce")
+    d = d[d["PRD_DE"].isin(years)].copy()
+
+    row_order = [str(x) for x in pivot_cfg.get("category_order", [])]
+    if not row_order:
+        row_order = list(dict.fromkeys(d[category_col].astype(str)))
+    row_label = str(pivot_cfg.get("row_label", "구분"))
+    cagr_label = str(pivot_cfg.get("cagr_label", f"CAGR('{years[0][2:]}~'{years[-1][2:]})"))
+    periods = max(int(str(years[-1])[:4]) - int(str(years[0])[:4]), 1)
+
+    pv = d.pivot_table(
+        index=category_col,
+        columns="PRD_DE",
+        values="DT",
+        aggfunc="first",
+        sort=False,
+        observed=True,
+    )
+    for y in years:
+        if y not in pv.columns:
+            pv[y] = pd.NA
+
+    out = pd.DataFrame(index=row_order)
+    for y in years:
+        out[f"{y}년"] = [pv.loc[r, y] if r in pv.index else pd.NA for r in row_order]
+
+    start_vals = pd.to_numeric(out[f"{years[0]}년"], errors="coerce")
+    end_vals = pd.to_numeric(out[f"{years[-1]}년"], errors="coerce")
+    cagr_vals = pd.Series(pd.NA, index=out.index, dtype="object")
+    mask = start_vals.notna() & end_vals.notna() & (start_vals > 0) & (end_vals > 0)
+    cagr_vals.loc[mask] = ((((end_vals.loc[mask] / start_vals.loc[mask]) ** (1 / periods)) - 1) * 100).round(1)
+    out[cagr_label] = cagr_vals
+    out.index.name = row_label
+    return out
+
+
+def make_hierarchy_timeseries_summary_pivot(df: pd.DataFrame, pivot_cfg: dict) -> pd.DataFrame:
+    required = ["PRD_DE", "DT"]
+    missing = [c for c in required if c not in df.columns]
+    if missing:
+        raise RuntimeError(f"hierarchy_timeseries_summary columns missing: {missing}")
+
+    group_col = str(pivot_cfg.get("group_col", "GROUP_NM"))
+    detail_col = str(pivot_cfg.get("detail_col", "DETAIL_NM"))
+    order_col = str(pivot_cfg.get("order_col", "DISPLAY_ORDER"))
+    for c in [group_col, detail_col]:
+        if c not in df.columns:
+            raise RuntimeError(f"hierarchy_timeseries_summary column missing: {c}")
+
+    years = [str(y) for y in pivot_cfg.get("years", [])]
+    if not years:
+        raise RuntimeError("hierarchy_timeseries_summary requires years")
+
+    group_label = str(pivot_cfg.get("group_label", "구분"))
+    detail_label = str(pivot_cfg.get("detail_label", "세부"))
+    cagr_label = str(pivot_cfg.get("cagr_label", f"CAGR('{years[0][2:]}~'{years[-1][2:]})"))
+    periods = max(int(str(years[-1])[:4]) - int(str(years[0])[:4]), 1)
+
+    d = df.copy()
+    d["PRD_DE"] = d["PRD_DE"].astype(str)
+    d["DT"] = pd.to_numeric(d["DT"], errors="coerce")
+    d = d[d["PRD_DE"].isin(years)].copy()
+    if order_col in d.columns:
+        d[order_col] = pd.to_numeric(d[order_col], errors="coerce")
+    else:
+        d[order_col] = pd.NA
+
+    rows: List[Dict[str, Any]] = []
+    keys = [group_col, detail_col, order_col]
+    dedup = d[keys].drop_duplicates()
+    dedup = dedup.sort_values(order_col, kind="stable")
+    for _, rec in dedup.iterrows():
+        g = str(rec[group_col]) if pd.notna(rec[group_col]) else ""
+        det_raw = rec[detail_col]
+        det = str(det_raw) if pd.notna(det_raw) else ""
+        block = d[(d[group_col].astype(str) == g) & (d[detail_col].fillna("").astype(str) == det)].copy()
+        row: Dict[str, Any] = {group_label: g, detail_label: det}
+        for y in years:
+            val = block[block["PRD_DE"] == y]["DT"]
+            row[f"{y}년"] = val.iloc[0] if not val.empty else pd.NA
+        start_val = pd.to_numeric(row.get(f"{years[0]}년"), errors="coerce")
+        end_val = pd.to_numeric(row.get(f"{years[-1]}년"), errors="coerce")
+        row[cagr_label] = (
+            round((((end_val / start_val) ** (1 / periods)) - 1) * 100, 1)
+            if pd.notna(start_val) and pd.notna(end_val) and start_val > 0 and end_val > 0
+            else pd.NA
+        )
+        rows.append(row)
+    return pd.DataFrame(rows, columns=[group_label, detail_label] + [f"{y}년" for y in years] + [cagr_label])
+
+
+def make_category_compare_summary_pivot(df: pd.DataFrame, pivot_cfg: dict) -> pd.DataFrame:
+    required = ["PRD_DE", "DT"]
+    missing = [c for c in required if c not in df.columns]
+    if missing:
+        raise RuntimeError(f"category_compare_summary columns missing: {missing}")
+
+    category_col = str(pivot_cfg.get("category_col", "C2_NM"))
+    if category_col not in df.columns:
+        raise RuntimeError(f"category_compare_summary category column missing: {category_col}")
+
+    years = [str(y) for y in pivot_cfg.get("years", [])]
+    if len(years) < 2:
+        raise RuntimeError("category_compare_summary requires at least 2 years")
+
+    d = df.copy()
+    d["PRD_DE"] = d["PRD_DE"].astype(str)
+    d = d[d["PRD_DE"].isin(years)].copy()
+    d["DT"] = pd.to_numeric(d["DT"], errors="coerce")
+
+    filters = pivot_cfg.get("filters", {})
+    for col, vals in filters.items():
+        if col in d.columns:
+            d = d[d[col].astype(str).isin([str(v) for v in vals])].copy()
+
+    pv = d.pivot_table(index=category_col, columns="PRD_DE", values="DT", aggfunc="first", sort=False, observed=True)
+    for y in years:
+        if y not in pv.columns:
+            pv[y] = pd.NA
+
+    group_col_name = str(pivot_cfg.get("group_col_name", "구분"))
+    detail_col_name = str(pivot_cfg.get("detail_col_name", "세부"))
+    cagr_label = str(pivot_cfg.get("cagr_label", f"CAGR('{years[0][2:]}~'{years[-1][2:]})"))
+    annual_change_label = str(pivot_cfg.get("annual_change_label", "")).strip()
+    annual_change_categories = {str(x) for x in pivot_cfg.get("annual_change_categories", [])}
+    periods = max(int(years[-1]) - int(years[0]), 1)
+
+    row_defs = pivot_cfg.get("row_defs", [])
+    rows: List[Dict[str, Any]] = []
+    for item in row_defs:
+        if not isinstance(item, dict):
+            continue
+        group_val = str(item.get("group", ""))
+        detail_val = str(item.get("detail", ""))
+        cat = str(item.get("category", ""))
+        row: Dict[str, Any] = {group_col_name: group_val, detail_col_name: detail_val}
+        for y in years:
+            row[f"{y}년"] = pv.loc[cat, y] if cat in pv.index else pd.NA
+        start_val = pd.to_numeric(row.get(f"{years[0]}년"), errors="coerce")
+        end_val = pd.to_numeric(row.get(f"{years[-1]}년"), errors="coerce")
+        row[cagr_label] = (
+            round((((end_val / start_val) ** (1 / periods)) - 1) * 100, 2)
+            if pd.notna(start_val) and pd.notna(end_val) and start_val > 0 and end_val > 0
+            else pd.NA
+        )
+        if annual_change_label:
+            row[annual_change_label] = (
+                round((end_val - start_val) / periods, 2)
+                if cat in annual_change_categories and pd.notna(start_val) and pd.notna(end_val)
+                else pd.NA
+            )
+        rows.append(row)
+
+    cols = [group_col_name, detail_col_name] + [f"{y}년" for y in years] + [cagr_label]
+    if annual_change_label:
+        cols.append(annual_change_label)
+    return pd.DataFrame(rows, columns=cols)
+
+
+def make_fertility_latest_compare_summary_pivot(df: pd.DataFrame, pivot_cfg: dict) -> pd.DataFrame:
+    required = ["C1_NM", "ITM_ID", "PRD_DE", "DT"]
+    missing = [c for c in required if c not in df.columns]
+    if missing:
+        raise RuntimeError(f"fertility_latest_compare_summary columns missing: {missing}")
+
+    d = df.copy()
+    d["PRD_DE"] = d["PRD_DE"].astype(str)
+    d["ITM_ID"] = d["ITM_ID"].astype(str)
+    d["DT"] = pd.to_numeric(d["DT"], errors="coerce")
+    filters = pivot_cfg.get("filters", {})
+    for col, vals in filters.items():
+        if col in d.columns:
+            d = d[d[col].astype(str).isin([str(v) for v in vals])].copy()
+
+    birth_item_id = str(pivot_cfg.get("birth_item_id", "T1"))
+    fert_item_id = str(pivot_cfg.get("fertility_item_id", "T2"))
+    left_year = str(pivot_cfg.get("left_year", "2024"))
+    right_year = str(pivot_cfg.get("right_year", "2025"))
+    share_year = str(pivot_cfg.get("share_year", right_year))
+    yoy_label = str(pivot_cfg.get("yoy_label", "전년대비"))
+    share_label = str(pivot_cfg.get("share_label", f"비중('{share_year[2:]})"))
+    area_label = str(pivot_cfg.get("area_label", "구분"))
+    national_name = str(pivot_cfg.get("national_name", "전국"))
+    national_alias = str(pivot_cfg.get("national_alias", "계"))
+
+    pv = d.pivot_table(index="C1_NM", columns=["ITM_ID", "PRD_DE"], values="DT", aggfunc="first", sort=False, observed=True)
+    region_order = [str(x) for x in pivot_cfg.get("region_order", [])] or list(dict.fromkeys(d["C1_NM"].astype(str)))
+    national_birth = pd.to_numeric(pv.loc[national_name, (birth_item_id, share_year)], errors="coerce") if national_name in pv.index and (birth_item_id, share_year) in pv.columns else pd.NA
+
+    cols = [
+        ("출생아수", f"{left_year}년"), ("출생아수", f"{right_year}년"), ("출생아수", share_label), ("출생아수", yoy_label),
+        ("합계출산율", f"{left_year}년"), ("합계출산율", f"{right_year}년"), ("합계출산율", yoy_label),
+    ]
+    out = pd.DataFrame(index=[], columns=pd.MultiIndex.from_tuples(cols), dtype="object")
+    for region in region_order:
+        if region not in pv.index:
+            continue
+        name = national_alias if region == national_name else region
+        b_left = pd.to_numeric(pv.loc[region, (birth_item_id, left_year)], errors="coerce") if (birth_item_id, left_year) in pv.columns else pd.NA
+        b_right = pd.to_numeric(pv.loc[region, (birth_item_id, right_year)], errors="coerce") if (birth_item_id, right_year) in pv.columns else pd.NA
+        f_left = pd.to_numeric(pv.loc[region, (fert_item_id, left_year)], errors="coerce") if (fert_item_id, left_year) in pv.columns else pd.NA
+        f_right = pd.to_numeric(pv.loc[region, (fert_item_id, right_year)], errors="coerce") if (fert_item_id, right_year) in pv.columns else pd.NA
+        out.loc[name, ("출생아수", f"{left_year}년")] = b_left
+        out.loc[name, ("출생아수", f"{right_year}년")] = b_right
+        out.loc[name, ("출생아수", share_label)] = round((b_right / national_birth) * 100, 1) if pd.notna(b_right) and pd.notna(national_birth) and national_birth not in (0, 0.0) else pd.NA
+        out.loc[name, ("출생아수", yoy_label)] = round(((b_right - b_left) / b_left) * 100, 1) if pd.notna(b_left) and pd.notna(b_right) and b_left not in (0, 0.0) else pd.NA
+        out.loc[name, ("합계출산율", f"{left_year}년")] = f_left
+        out.loc[name, ("합계출산율", f"{right_year}년")] = f_right
+        out.loc[name, ("합계출산율", yoy_label)] = round(((f_right - f_left) / f_left) * 100, 1) if pd.notna(f_left) and pd.notna(f_right) and f_left not in (0, 0.0) else pd.NA
+    out.index.name = area_label
+    return out
+
+
+def make_age_gender_share_compare_pivot(df: pd.DataFrame, pivot_cfg: dict) -> pd.DataFrame:
+    required = ["PRD_DE", "DT", "ITM_ID", "C2_NM"]
+    missing = [c for c in required if c not in df.columns]
+    if missing:
+        raise RuntimeError(f"age_gender_share_compare columns missing: {missing}")
+
+    years = [str(y) for y in pivot_cfg.get("years", [])]
+    if len(years) < 2:
+        raise RuntimeError("age_gender_share_compare requires at least 2 years")
+
+    region_col = str(pivot_cfg.get("region_col", "C1_NM"))
+    age_col = str(pivot_cfg.get("age_col", "C2_NM"))
+    item_col = str(pivot_cfg.get("item_col", "ITM_ID"))
+    total_item_id = str(pivot_cfg.get("total_item_id", "T4"))
+    male_item_id = str(pivot_cfg.get("male_item_id", "T2"))
+    female_item_id = str(pivot_cfg.get("female_item_id", "T3"))
+    area_label = str(pivot_cfg.get("area_label", "구분"))
+    cagr_label = str(pivot_cfg.get("cagr_label", f"CAGR('{years[0][2:]}~'{years[-1][2:]})"))
+    periods = max(int(years[-1]) - int(years[0]), 1)
+
+    d = df.copy()
+    d["PRD_DE"] = d["PRD_DE"].astype(str)
+    d = d[d["PRD_DE"].isin(years)].copy()
+    for col, vals in pivot_cfg.get("filters", {}).items():
+        if col in d.columns:
+            d = d[d[col].astype(str).isin([str(v) for v in vals])].copy()
+    d["DT"] = pd.to_numeric(d["DT"], errors="coerce")
+    d[age_col] = d[age_col].astype(str)
+    age_order = [str(x) for x in pivot_cfg.get("age_order", [])] or list(dict.fromkeys(d[age_col]))
+
+    year_totals = {}
+    for y in years:
+        v = d[(d["PRD_DE"] == y) & (d[age_col] == "계") & (d[item_col].astype(str) == total_item_id)]["DT"]
+        year_totals[y] = pd.to_numeric(v.iloc[0], errors="coerce") if not v.empty else pd.NA
+
+    rows = []
+    for age_name in age_order:
+        row = {area_label: age_name}
+        for y in years:
+            tv = d[(d["PRD_DE"] == y) & (d[age_col] == age_name) & (d[item_col].astype(str) == total_item_id)]["DT"]
+            mv = d[(d["PRD_DE"] == y) & (d[age_col] == age_name) & (d[item_col].astype(str) == male_item_id)]["DT"]
+            fv = d[(d["PRD_DE"] == y) & (d[age_col] == age_name) & (d[item_col].astype(str) == female_item_id)]["DT"]
+            t = pd.to_numeric(tv.iloc[0], errors="coerce") if not tv.empty else pd.NA
+            m = pd.to_numeric(mv.iloc[0], errors="coerce") if not mv.empty else pd.NA
+            f = pd.to_numeric(fv.iloc[0], errors="coerce") if not fv.empty else pd.NA
+            row[f"{y}년 인구수"] = t
+            row[f"{y}년 성비"] = round((m / f) * 100, 1) if pd.notna(m) and pd.notna(f) and f not in (0, 0.0) else pd.NA
+            base = pd.to_numeric(year_totals.get(y), errors="coerce")
+            row[f"{y}년 비중"] = round((t / base) * 100, 1) if pd.notna(t) and pd.notna(base) and base not in (0, 0.0) else pd.NA
+        s = pd.to_numeric(row.get(f"{years[0]}년 인구수"), errors="coerce")
+        e = pd.to_numeric(row.get(f"{years[-1]}년 인구수"), errors="coerce")
+        row[cagr_label] = round((((e / s) ** (1 / periods)) - 1) * 100, 1) if pd.notna(s) and pd.notna(e) and s > 0 and e > 0 else pd.NA
+        rows.append(row)
+
+    cols = [area_label]
+    for y in years:
+        cols += [f"{y}년 인구수", f"{y}년 성비", f"{y}년 비중"]
+    cols += [cagr_label]
+    return pd.DataFrame(rows, columns=cols)
+
+
 def flatten_for_block(df: pd.DataFrame) -> pd.DataFrame:
     out = df.copy()
     if isinstance(out.columns, pd.MultiIndex):
@@ -1378,6 +1833,18 @@ def build_single_source_view(df: pd.DataFrame, spec: dict) -> pd.DataFrame:
         return make_rank_and_metric_block_summary_pivot(d, spec)
     if kind == "age_distribution_summary":
         return make_age_distribution_summary_pivot(d, spec)
+    if kind == "category_timeseries_summary":
+        return make_category_timeseries_summary_pivot(d, spec)
+    if kind == "hierarchy_timeseries_summary":
+        return make_hierarchy_timeseries_summary_pivot(d, spec)
+    if kind == "single_metric_share_summary":
+        return make_single_metric_share_summary_pivot(d, spec)
+    if kind == "category_compare_summary":
+        return make_category_compare_summary_pivot(d, spec)
+    if kind == "fertility_latest_compare_summary":
+        return make_fertility_latest_compare_summary_pivot(d, spec)
+    if kind == "age_gender_share_compare":
+        return make_age_gender_share_compare_pivot(d, spec)
     raise RuntimeError(f"unknown view kind: {kind}")
 
 
@@ -1504,6 +1971,10 @@ def build_table_views(df: pd.DataFrame, job: dict) -> Dict[str, pd.DataFrame]:
                     views[sheet_name] = make_metric_summary_pivot(df, cfg)
                 elif kind == "latest_rank":
                     views[sheet_name] = make_latest_rank_pivot(df, cfg)
+                elif kind == "category_compare_summary":
+                    views[sheet_name] = make_category_compare_summary_pivot(df, cfg)
+                elif kind == "fertility_latest_compare_summary":
+                    views[sheet_name] = make_fertility_latest_compare_summary_pivot(df, cfg)
                 else:
                     views[sheet_name] = make_custom_pivot(pivot_src, cfg)
             except Exception as e:
@@ -1974,3 +2445,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

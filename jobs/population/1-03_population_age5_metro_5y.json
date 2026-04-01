@@ -1,25 +1,81 @@
 {
   "job_name": "1-03_주민등록인구_시도_5세별_성별_최근5년",
-  "provider": "kosis",
-
-  "orgId": "101",
-  "tblId": "DT_1B04005N",
-
-  "prdSe": "Y",
-  "newEstPrdCnt": 5,
-
-  "itmId": "T2 T3 T4",
-  "objL1": "00 11 26 27 28 29 30 31 36 41 51 43 44 52 46 47 48 50",
-  "objL2": "ALL",
-
+  "provider": "kosis_sources",
+  "include_source_raw": true,
+  "sources": [
+    {
+      "name": "recent5y",
+      "orgId": "101",
+      "tblId": "DT_1B04005N",
+      "prdSe": "Y",
+      "newEstPrdCnt": 5,
+      "itmId": "T2 T3 T4",
+      "objL1": "00 11 26 27 28 29 30 31 36 41 51 43 44 52 46 47 48 50",
+      "objL2": "ALL"
+    },
+    {
+      "name": "incheon_compare",
+      "orgId": "101",
+      "tblId": "DT_1B04005N",
+      "prdSe": "Y",
+      "newEstPrdCnt": 11,
+      "itmId": "T2 T3 T4",
+      "objL1": "28",
+      "objL2": "ALL"
+    }
+  ],
   "output_subdir": "인구",
   "output_prefix": "1-03_인구_시도_5세별_성별_최근5년",
-
-  "pivot": {
-    "index": ["C1_NM", "C2_NM"],
-    "columns": ["PRD_DE", "ITM_NM"],
-    "values": "DT",
-    "sheet_name": "TABLE_VIEW",
-    "flatten_columns_year": false
-  }
+  "views": [
+    {
+      "kind": "pivot",
+      "source": "recent5y",
+      "sheet_name": "TABLE_VIEW",
+      "index": ["C1_NM", "C2_NM"],
+      "columns": ["PRD_DE", "ITM_NM"],
+      "values": "DT",
+      "sort": false
+    },
+    {
+      "kind": "age_gender_share_compare",
+      "source": "incheon_compare",
+      "sheet_name": "SUMMARY_VIEW",
+      "region_col": "C1_NM",
+      "age_col": "C2_NM",
+      "item_col": "ITM_ID",
+      "years": ["2015", "2025"],
+      "filters": {
+        "C1_NM": ["인천광역시"]
+      },
+      "total_item_id": "T2",
+      "male_item_id": "T3",
+      "female_item_id": "T4",
+      "area_label": "구분",
+      "cagr_label": "CAGR('15~'25)",
+      "age_order": [
+        "계",
+        "0 - 4세",
+        "5 - 9세",
+        "10 - 14세",
+        "15 - 19세",
+        "20 - 24세",
+        "25 - 29세",
+        "30 - 34세",
+        "35 - 39세",
+        "40 - 44세",
+        "45 - 49세",
+        "50 - 54세",
+        "55 - 59세",
+        "60 - 64세",
+        "65 - 69세",
+        "70 - 74세",
+        "75 - 79세",
+        "80 - 84세",
+        "85 - 89세",
+        "90 - 94세",
+        "95 - 99세",
+        "100+"
+      ]
+    }
+  ]
 }

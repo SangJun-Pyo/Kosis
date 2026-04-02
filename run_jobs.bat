@@ -8,8 +8,18 @@ if "%TARGET%"=="" set "TARGET=jobs"
 set "PY_CMD="
 where py >nul 2>&1
 if not errorlevel 1 (
-  set "PY_CMD=py -3.13"
-) else (
+  py -3.13 -V >nul 2>&1
+  if not errorlevel 1 (
+    set "PY_CMD=py -3.13"
+  ) else (
+    py -3 -V >nul 2>&1
+    if not errorlevel 1 (
+      set "PY_CMD=py -3"
+    )
+  )
+)
+
+if "%PY_CMD%"=="" (
   where python >nul 2>&1
   if not errorlevel 1 (
     set "PY_CMD=python"
@@ -19,6 +29,7 @@ if not errorlevel 1 (
 if "%PY_CMD%"=="" (
   echo [ERROR] Python is not installed or not available on PATH.
   echo [ERROR] Install Python 3.13 or newer, then run this file again.
+  echo [ERROR] Check with: py -0 and python --version
   pause
   exit /b 1
 )
@@ -43,8 +54,9 @@ if errorlevel 1 (
   echo [INFO] Installing required Python packages...
   call %PY_CMD% -m pip install --disable-pip-version-check --target "%LOCAL_DEPS%" -r requirements.txt
   if errorlevel 1 (
-    echo [ERROR] Failed to install required Python packages.
-    echo [ERROR] Check your internet, firewall, or proxy settings and run again.
+    echo [ERROR] Failed to install required Python packages or Python runtime is unavailable.
+    echo [ERROR] First verify Python runtime with: py -0 and python --version
+    echo [ERROR] Then check internet, firewall, or proxy settings and run again.
     pause
     exit /b 1
   )

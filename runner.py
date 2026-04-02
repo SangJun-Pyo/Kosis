@@ -122,6 +122,92 @@ def sanitize_filename(name: str) -> str:
     return name.strip()[:150]
 
 
+def parse_year_quarter(value: Any) -> Tuple[int, int]:
+    s = str(value).strip()
+    if not s:
+        return -1, -1
+
+    # e.g. 2025.1/4
+    m = re.match(r"^(\d{4})\.(\d)/4$", s)
+    if m:
+        y, q = int(m.group(1)), int(m.group(2))
+        return (y, q) if 1 <= q <= 4 else (-1, -1)
+
+    # e.g. 2025Q1
+    m = re.match(r"^(\d{4})[Qq]([1-4])$", s)
+    if m:
+        return int(m.group(1)), int(m.group(2))
+
+    # e.g. 202501~202504 (quarter code style)
+    m = re.match(r"^(\d{4})(0[1-4])$", s)
+    if m:
+        return int(m.group(1)), int(m.group(2))
+
+    # e.g. 20251~20254
+    m = re.match(r"^(\d{4})([1-4])$", s)
+    if m:
+        return int(m.group(1)), int(m.group(2))
+
+    # year-only -> treat as Q4 target
+    if re.match(r"^\d{4}$", s):
+        return int(s), 4
+
+    # optional support for month-based period values like 202503/202512
+    m = re.match(r"^(\d{4})(\d{2})$", s)
+    if m:
+        y, mm = int(m.group(1)), int(m.group(2))
+        if 1 <= mm <= 4:
+            return y, mm
+        if mm in (3, 6, 9, 12):
+            return y, mm // 3
+
+    return -1, -1
+
+
+def format_year_quarter(year: int, quarter: int) -> str:
+    return f"{year}.{quarter}/4"
+
+
+def normalize_period_label(value: Any) -> str:
+    y, q = parse_year_quarter(value)
+    if y > 0 and 1 <= q <= 4:
+        return format_year_quarter(y, q)
+    return str(value).strip()
+
+
+def resolve_requested_periods(available_periods: List[str], requested_periods: List[str]) -> List[str]:
+    """
+    Resolve requested periods against available quarter labels.
+    If exact quarter is unavailable for the year, fallback to latest available quarter in that year.
+    """
+    norm_available = [normalize_period_label(v) for v in available_periods]
+    available_set = set(norm_available)
+    by_year: Dict[int, List[int]] = {}
+    for p in norm_available:
+        y, q = parse_year_quarter(p)
+        if y < 0:
+            continue
+        by_year.setdefault(y, []).append(q)
+    for y in by_year:
+        by_year[y] = sorted(set(by_year[y]))
+
+    resolved: List[str] = []
+    for req in requested_periods:
+        req_norm = normalize_period_label(req)
+        if req_norm in available_set:
+            resolved.append(req_norm)
+            continue
+        y, q = parse_year_quarter(req_norm)
+        if y < 0 or y not in by_year:
+            resolved.append(req_norm)
+            continue
+        # Prefer the nearest quarter not exceeding target; otherwise use the latest available
+        candidates = [x for x in by_year[y] if x <= q]
+        use_q = max(candidates) if candidates else max(by_year[y])
+        resolved.append(format_year_quarter(y, use_q))
+    return resolved
+
+
 def map_age_to_10y_bucket(label: Any) -> Optional[str]:
     s = str(label).strip()
     if not s:
@@ -261,18 +347,10 @@ def apply_preprocess(df: pd.DataFrame, job: dict) -> pd.DataFrame:
         if src_col not in d.columns:
             raise RuntimeError(f"quarter_pick_latest_or_q4 source column missing: {src_col}")
 
-        def _parse_quarter(v: Any) -> Tuple[int, int]:
-            s = str(v).strip()
-            m = re.match(r"^(\d{4})\.(\d)/4$", s)
-            if m:
-                return int(m.group(1)), int(m.group(2))
-            if re.match(r"^\d{4}$", s):
-                return int(s), 4
-            return -1, -1
-
         picked: Dict[int, Tuple[int, str]] = {}
-        for raw in d[src_col].astype(str):
-            y, q = _parse_quarter(raw)
+        raw_values = d[src_col].astype(str)
+        for raw in raw_values:
+            y, q = parse_year_quarter(raw)
             if y < 0:
                 continue
             prev = picked.get(y)
@@ -281,6 +359,8 @@ def apply_preprocess(df: pd.DataFrame, job: dict) -> pd.DataFrame:
         keep = {v for _, v in picked.values()}
         if keep:
             d = d[d[src_col].astype(str).isin(keep)].copy()
+        # Standardize quarter labels for downstream pivot/summary matching.
+        d[src_col] = d[src_col].map(normalize_period_label)
 
     hierarchy_cfg = cfg.get("hierarchy_map")
     if hierarchy_cfg:
@@ -1481,17 +1561,19 @@ def make_category_timeseries_summary_pivot(df: pd.DataFrame, pivot_cfg: dict) ->
     years = [str(y) for y in pivot_cfg.get("years", [])]
     if not years:
         raise RuntimeError("category_timeseries_summary requires years")
+    years = [normalize_period_label(y) for y in years]
 
     d = df.copy()
-    d["PRD_DE"] = d["PRD_DE"].astype(str)
+    d["PRD_DE"] = d["PRD_DE"].astype(str).map(normalize_period_label)
     d["DT"] = pd.to_numeric(d["DT"], errors="coerce")
+    years = resolve_requested_periods(d["PRD_DE"].tolist(), years)
     d = d[d["PRD_DE"].isin(years)].copy()
 
     row_order = [str(x) for x in pivot_cfg.get("category_order", [])]
     if not row_order:
         row_order = list(dict.fromkeys(d[category_col].astype(str)))
     row_label = str(pivot_cfg.get("row_label", "구분"))
-    cagr_label = str(pivot_cfg.get("cagr_label", f"CAGR('{years[0][2:]}~'{years[-1][2:]})"))
+    cagr_label = str(pivot_cfg.get("cagr_label", f"CAGR('{years[0][2:4]}~'{years[-1][2:4]})"))
     periods = max(int(str(years[-1])[:4]) - int(str(years[0])[:4]), 1)
 
     pv = d.pivot_table(
@@ -1536,15 +1618,17 @@ def make_hierarchy_timeseries_summary_pivot(df: pd.DataFrame, pivot_cfg: dict) -
     years = [str(y) for y in pivot_cfg.get("years", [])]
     if not years:
         raise RuntimeError("hierarchy_timeseries_summary requires years")
+    years = [normalize_period_label(y) for y in years]
 
     group_label = str(pivot_cfg.get("group_label", "구분"))
     detail_label = str(pivot_cfg.get("detail_label", "세부"))
-    cagr_label = str(pivot_cfg.get("cagr_label", f"CAGR('{years[0][2:]}~'{years[-1][2:]})"))
+    cagr_label = str(pivot_cfg.get("cagr_label", f"CAGR('{years[0][2:4]}~'{years[-1][2:4]})"))
     periods = max(int(str(years[-1])[:4]) - int(str(years[0])[:4]), 1)
 
     d = df.copy()
-    d["PRD_DE"] = d["PRD_DE"].astype(str)
+    d["PRD_DE"] = d["PRD_DE"].astype(str).map(normalize_period_label)
     d["DT"] = pd.to_numeric(d["DT"], errors="coerce")
+    years = resolve_requested_periods(d["PRD_DE"].tolist(), years)
     d = d[d["PRD_DE"].isin(years)].copy()
     if order_col in d.columns:
         d[order_col] = pd.to_numeric(d[order_col], errors="coerce")
